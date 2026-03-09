@@ -1,11 +1,11 @@
 class ApiResponse {
   constructor(statusCodeOrRes = 200, data = null, message = "Request successful") {
-    if (typeof statusCodeOrRes === "object" && statusCodeOrRes !== null && "status" in statusCodeOrRes) {
+    if (
+      typeof statusCodeOrRes === "object" &&
+      statusCodeOrRes !== null &&
+      typeof statusCodeOrRes.status === "function"
+    ) {
       this.res = statusCodeOrRes;
-      this.statusCode = 200;
-      this.success = true;
-      this.message = message;
-      this.data = data;
       return;
     }
 
