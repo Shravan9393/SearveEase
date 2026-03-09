@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react"
+import { useAuth } from "../context/AuthContext"
 import { motion, AnimatePresence } from "motion/react"
 import { X, Mail, Lock, Eye, EyeOff, User, Phone, Sparkles, ArrowLeft, Briefcase, ShoppingBag, Star, MapPin, Camera, Upload } from "lucide-react"
 import { Button } from "./ui/button"
@@ -20,6 +21,7 @@ type AuthMode = 'signin' | 'signup'
 type LoginMethod = 'email' | 'phone'
 
 const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) => {
+  const { login, registerCustomer, registerProvider, googleLogin } = useAuth()
   const [currentStep, setCurrentStep] = useState<AuthStep>('welcome')
   const [authMode, setAuthMode] = useState<AuthMode>('signin')
   const [userType, setUserType] = useState<UserType>('customer')
@@ -191,53 +193,92 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
 
   const handleSubmit = useCallback(async () => {
     setIsLoading(true)
-
-    // Simulate API call
-    setTimeout(() => {
-      const profileImage = userType === 'customer' 
-        ? customerProfileData.profileImage 
-        : providerData.profileImage
-
-      const userData = {
-        id: Date.now().toString(),
-        name: authMode === 'signin' ? 'User' : credentialsData.name,
-        email: credentialsData.email,
-        phone: credentialsData.phone,
-        avatar: profileImage ? URL.createObjectURL(profileImage) : 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-        userType: userType,
-        isProvider: userType === 'provider',
-        location: userType === 'customer' ? customerProfileData.location : providerData.location,
-        ...(userType === 'customer' && {
-          preferredServices: customerProfileData.preferredServices
-        }),
-        ...(userType === 'provider' && {
+    try {
+      if (authMode === 'signin') {
+        await login(credentialsData.email, credentialsData.password)
+      } else if (userType === 'customer') {
+        await registerCustomer({
+          userName: credentialsData.email.split('@')[0] || credentialsData.name.replace(/\s+/g, '').toLowerCase(),
+          email: credentialsData.email,
+          password: credentialsData.password,
+          fullName: credentialsData.name,
+          phone: credentialsData.phone || '9999999999',
+        })
+      } else {
+        await registerProvider({
+          userName: credentialsData.email.split('@')[0] || credentialsData.name.replace(/\s+/g, '').toLowerCase(),
+          email: credentialsData.email,
+          password: credentialsData.password,
+          fullName: credentialsData.name,
+          phone: credentialsData.phone || '9999999999',
+          displayName: credentialsData.name,
           businessName: providerData.businessName,
-          serviceCategory: providerData.serviceCategory,
-          experience: providerData.experience,
-          description: providerData.description,
-          rating: 4.8,
-          completedJobs: Math.floor(Math.random() * 100) + 10,
-          verified: true
+          description: providerData.description || 'Service provider',
         })
       }
 
-      onAuthComplete(userData)
+      onAuthComplete({
+        name: credentialsData.name || credentialsData.email,
+        isProvider: userType === 'provider',
+        serviceCategory: providerData.serviceCategory,
+      })
+      onClose()
+    } catch (error) {
+      alert('Authentication failed. Please check your details.')
+    } finally {
       setIsLoading(false)
-    }, 2000)
-  }, [authMode, credentialsData, userType, customerProfileData, providerData, onAuthComplete])
-
-  const handleSocialLogin = useCallback((provider: 'google') => {
-    // Mock social login
-    const userData = {
-      id: Date.now().toString(),
-      name: `${provider} User`,
-      email: `user@${provider}.com`,
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-      userType: userType,
-      isProvider: userType === 'provider'
     }
-    onAuthComplete(userData)
-  }, [userType, onAuthComplete])
+  }, [authMode, credentialsData, userType, providerData, login, registerCustomer, registerProvider, onAuthComplete, onClose])
+
+  const handleSocialLogin = useCallback(async (provider: 'google') => {
+    if (provider !== 'google') return
+
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+    if (!clientId) {
+      alert('Google Sign-In is not configured. Please set VITE_GOOGLE_CLIENT_ID in frontend env.')
+      return
+    }
+
+    const launchGoogle = () => {
+      const googleObj = (window as any).google
+      if (!googleObj?.accounts?.id) {
+        alert('Google SDK failed to initialize.')
+        return
+      }
+
+      googleObj.accounts.id.initialize({
+        client_id: clientId,
+        callback: async (response: { credential?: string }) => {
+          if (!response.credential) return
+          try {
+            await googleLogin(response.credential)
+            onAuthComplete({
+              name: 'Google User',
+              isProvider: false,
+            })
+            onClose()
+          } catch (error) {
+            alert('Google Sign-In failed. Please try again.')
+          }
+        },
+      })
+
+      googleObj.accounts.id.prompt()
+    }
+
+    if (!(window as any).google?.accounts?.id) {
+      const script = document.createElement('script')
+      script.src = 'https://accounts.google.com/gsi/client'
+      script.async = true
+      script.defer = true
+      script.onload = launchGoogle
+      script.onerror = () => alert('Failed to load Google Sign-In SDK.')
+      document.body.appendChild(script)
+      return
+    }
+
+    launchGoogle()
+  }, [googleLogin, onAuthComplete, onClose])
 
   const renderWelcomeStep = () => (
     <div className="text-center space-y-8">
