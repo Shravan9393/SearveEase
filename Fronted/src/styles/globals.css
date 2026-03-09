@@ -1,0 +1,458 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 14px;
+  
+  /* Apple Glass Color System */
+  --sage-50: #DAD7CD;
+  --sage-100: #A3B18A;
+  --sage-500: #588157;
+  --sage-700: #3A5A40;
+  --sage-900: #344E41;
+  
+  /* Light Mode Glass - Enhanced Frosting */
+  --background: #fafafa;
+  --foreground: oklch(0.145 0 0);
+  --glass-background: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --glass-shadow: rgba(0, 0, 0, 0.12);
+  
+  /* Modal specific glass effects */
+  --modal-glass-background: rgba(255, 255, 255, 0.95);
+  --modal-glass-border: rgba(255, 255, 255, 0.5);
+  --modal-glass-shadow: rgba(0, 0, 0, 0.15);
+  --modal-backdrop: rgba(0, 0, 0, 0.4);
+  
+  --card: var(--glass-background);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: var(--modal-glass-background);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: var(--sage-500);
+  --primary-foreground: #ffffff;
+  --secondary: var(--sage-100);
+  --secondary-foreground: var(--sage-900);
+  --muted: rgba(163, 177, 138, 0.2);
+  --muted-foreground: #717182;
+  --accent: var(--sage-50);
+  --accent-foreground: var(--sage-900);
+  --destructive: #d4183d;
+  --destructive-foreground: #ffffff;
+  --border: var(--glass-border);
+  --input: transparent;
+  --input-background: var(--glass-background);
+  --switch-background: #cbced4;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: var(--sage-500);
+  --radius: 1.5rem;
+  
+  /* Enhanced Glass specific variables */
+  --glass-blur: blur(32px);
+  --glass-saturation: saturate(180%);
+  --glass-hover-blur: blur(36px);
+  --glass-hover-scale: 1.02;
+  --glass-hover-translate: -6px;
+  
+  /* Modal glass effects */
+  --modal-glass-blur: blur(40px);
+  --modal-glass-saturation: saturate(200%);
+}
+
+.dark {
+  /* Dark Mode Glass - Much Darker for Better Visibility */
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --glass-background: rgba(255, 255, 255, 0.15);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-shadow: rgba(0, 0, 0, 0.4);
+  
+  /* Dark mode modal specific glass effects - Much Darker */
+  --modal-glass-background: rgba(20, 20, 20, 0.95);
+  --modal-glass-border: rgba(255, 255, 255, 0.2);
+  --modal-glass-shadow: rgba(0, 0, 0, 0.8);
+  --modal-backdrop: rgba(0, 0, 0, 0.9);
+  
+  /* Dark mode specific internal elements */
+  --modal-internal-glass: rgba(255, 255, 255, 0.08);
+  --modal-input-background: rgba(255, 255, 255, 0.08);
+  --modal-button-background: rgba(255, 255, 255, 0.1);
+  
+  --card: var(--glass-background);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: var(--modal-glass-background);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: var(--sage-100);
+  --primary-foreground: var(--sage-900);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: rgba(163, 177, 138, 0.15);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: var(--glass-border);
+  --input: var(--modal-input-background);
+  --ring: var(--sage-100);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  /* Glass morphism utilities */
+  --color-glass-bg: var(--glass-background);
+  --color-glass-border: var(--glass-border);
+  --color-glass-shadow: var(--glass-shadow);
+  
+  /* Modal glass utilities */
+  --color-modal-glass-bg: var(--modal-glass-background);
+  --color-modal-glass-border: var(--modal-glass-border);
+  --color-modal-glass-shadow: var(--modal-glass-shadow);
+  --color-modal-backdrop: var(--modal-backdrop);
+  --color-modal-internal-glass: var(--modal-internal-glass);
+  --color-modal-input-background: var(--modal-input-background);
+  --color-modal-button-background: var(--modal-button-background);
+  
+  /* Apple colors */
+  --color-sage-50: var(--sage-50);
+  --color-sage-100: var(--sage-100);
+  --color-sage-500: var(--sage-500);
+  --color-sage-700: var(--sage-700);
+  --color-sage-900: var(--sage-900);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+    background-image: radial-gradient(circle at 50% 50%, rgba(163, 177, 138, 0.1) 0%, transparent 50%);
+    min-height: 100vh;
+  }
+
+  /* Enhanced homepage gradient background for light mode */
+  .homepage-gradient {
+    background: 
+      radial-gradient(ellipse 140% 90% at 10% 10%, rgba(218, 215, 205, 0.15) 0%, transparent 60%),
+      radial-gradient(ellipse 120% 80% at 90% 20%, rgba(163, 177, 138, 0.12) 0%, transparent 55%),
+      radial-gradient(ellipse 100% 70% at 70% 80%, rgba(88, 129, 87, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse 130% 85% at 30% 90%, rgba(58, 90, 64, 0.06) 0%, transparent 45%),
+      linear-gradient(135deg, rgba(218, 215, 205, 0.03) 0%, rgba(163, 177, 138, 0.04) 50%, rgba(88, 129, 87, 0.02) 100%),
+      var(--background);
+  }
+
+  .dark .homepage-gradient {
+    background: var(--background);
+  }
+
+  /* Enhanced glass morphism */
+  .glass {
+    background: var(--glass-background);
+    backdrop-filter: var(--glass-blur) var(--glass-saturation);
+    -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturation);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  /* Enhanced modal glass - Much darker in dark mode */
+  .modal-glass {
+    background: var(--modal-glass-background);
+    backdrop-filter: var(--modal-glass-blur) var(--modal-glass-saturation);
+    -webkit-backdrop-filter: var(--modal-glass-blur) var(--modal-glass-saturation);
+    border: 1px solid var(--modal-glass-border);
+    box-shadow: 
+      0 25px 50px var(--modal-glass-shadow),
+      0 0 0 1px rgba(255, 255, 255, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  /* Dark mode specific modal glass overrides */
+  .dark .modal-glass {
+    background: var(--modal-glass-background);
+    border: 1px solid var(--modal-glass-border);
+    box-shadow: 
+      0 25px 50px var(--modal-glass-shadow),
+      0 0 0 1px rgba(255, 255, 255, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  /* Enhanced modal backdrop - Much darker */
+  .modal-backdrop {
+    background: var(--modal-backdrop);
+    backdrop-filter: blur(16px) saturate(120%);
+    -webkit-backdrop-filter: blur(16px) saturate(120%);
+  }
+
+  /* Modal internal glass elements for dark mode */
+  .dark .modal-internal-glass {
+    background: var(--modal-internal-glass) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(8px) saturate(120%) !important;
+    -webkit-backdrop-filter: blur(8px) saturate(120%) !important;
+  }
+
+  .glass-hover {
+    transition: all 220ms ease-out;
+  }
+
+  .glass-hover:hover {
+    transform: translateY(var(--glass-hover-translate)) scale(var(--glass-hover-scale));
+    backdrop-filter: var(--glass-hover-blur) var(--glass-saturation);
+    -webkit-backdrop-filter: var(--glass-hover-blur) var(--glass-saturation);
+    box-shadow: 0 20px 40px var(--glass-shadow);
+  }
+
+  .spotlight {
+    position: fixed;
+    pointer-events: none;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(163, 177, 138, 0.15) 0%, transparent 70%);
+    width: 600px;
+    height: 600px;
+    transform: translate(-50%, -50%);
+    transition: opacity 300ms ease;
+    z-index: -1;
+  }
+
+  .dark .spotlight {
+    background: radial-gradient(circle, rgba(88, 129, 87, 0.12) 0%, rgba(163, 177, 138, 0.08) 30%, transparent 70%);
+    box-shadow: 0 0 60px rgba(88, 129, 87, 0.3), 0 0 120px rgba(163, 177, 138, 0.2);
+  }
+
+  /* Reduced particle cursor effect for dark mode */
+  .dark .cursor-particles {
+    position: fixed;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .dark .particle {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: radial-gradient(circle, rgba(163, 177, 138, 0.7) 0%, rgba(163, 177, 138, 0.4) 40%, transparent 70%);
+    border-radius: 50%;
+    animation: particle-float 2.5s ease-out forwards;
+    box-shadow: 0 0 6px rgba(163, 177, 138, 0.4), 0 0 12px rgba(163, 177, 138, 0.2);
+    border: 1px solid rgba(163, 177, 138, 0.2);
+  }
+
+  @keyframes particle-float {
+    0% {
+      opacity: 0.8;
+      transform: scale(1) translate(0, 0) rotate(0deg);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(1.1) translate(var(--random-x, 0), calc(var(--random-y, 0) / 2)) rotate(180deg);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(0.1) translate(var(--random-x, 0), var(--random-y, 0)) rotate(360deg);
+    }
+  }
+
+  /* Light mode particles (minimal visibility) */
+  .particle {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: radial-gradient(circle, rgba(88, 129, 87, 0.3) 0%, rgba(88, 129, 87, 0.15) 40%, transparent 70%);
+    border-radius: 50%;
+    animation: particle-float-light 1.5s ease-out forwards;
+    box-shadow: 0 0 3px rgba(88, 129, 87, 0.2);
+    border: 1px solid rgba(88, 129, 87, 0.1);
+  }
+
+  @keyframes particle-float-light {
+    0% {
+      opacity: 0.4;
+      transform: scale(1) translate(0, 0);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(0.2) translate(var(--random-x, 0), var(--random-y, 0));
+    }
+  }
+
+  /* Enhanced button styles for consistent appearance */
+  .btn-consistent {
+    background: rgba(255, 255, 255, 0.9) !important;
+    color: var(--sage-900) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    backdrop-filter: blur(12px) saturate(120%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(120%) !important;
+  }
+
+  .btn-consistent:hover {
+    background: rgba(255, 255, 255, 0.95) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  /* Enhanced input styling for dark mode modals */
+  .dark input, .dark textarea {
+    background: var(--modal-input-background) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: var(--foreground) !important;
+    backdrop-filter: blur(8px) saturate(120%) !important;
+    -webkit-backdrop-filter: blur(8px) saturate(120%) !important;
+  }
+
+  .dark input::placeholder, .dark textarea::placeholder {
+    color: rgba(255, 255, 255, 0.4) !important;
+  }
+
+  .dark input:focus, .dark textarea:focus {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 2px rgba(163, 177, 138, 0.3) !important;
+  }
+
+  /* Dark mode button overrides within modals */
+  .dark .modal-glass button[type="button"]:not(.bg-gradient-to-r) {
+    background: var(--modal-button-background) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(8px) saturate(120%) !important;
+    -webkit-backdrop-filter: blur(8px) saturate(120%) !important;
+  }
+
+  .dark .modal-glass button[type="button"]:not(.bg-gradient-to-r):hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .bg-gradient-radial {
+    background-image: radial-gradient(var(--tw-gradient-stops));
+  }
+  
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+  
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+}
+
+/**
+ * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
+ */
+@layer base {
+  :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
+    h1 {
+      font-size: var(--text-3xl);
+      font-weight: 600;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    h2 {
+      font-size: var(--text-2xl);
+      font-weight: 600;
+      line-height: 1.3;
+      letter-spacing: -0.01em;
+    }
+
+    h3 {
+      font-size: var(--text-xl);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.4;
+    }
+
+    h4 {
+      font-size: var(--text-lg);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.4;
+    }
+
+    p {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-normal);
+      line-height: 1.6;
+    }
+
+    label {
+      font-size: var(--text-sm);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.4;
+    }
+
+    button {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.4;
+    }
+
+    input {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-normal);
+      line-height: 1.4;
+    }
+  }
+}
+
+html {
+  font-size: var(--font-size);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--glass-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
