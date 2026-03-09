@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { 
   Search, 
@@ -26,6 +26,7 @@ import { Slider } from "./ui/slider"
 import { ImageWithFallback } from "./figma/ImageWithFallback"
 import { ChatModal, ServiceProvider } from "./ChatModal"
 import { CartItem } from "../App"
+import { servicesAPI, categoriesAPI } from "../services"
 
 interface Service {
   id: string
@@ -72,9 +73,51 @@ const ServicesPage: React.FC<ServicesPageProps> = ({
   const [selectedProvider, setSelectedProvider] = useState<ServiceProvider | null>(null)
   const [showFilters, setShowFilters] = useState(true)
   const [showCart, setShowCart] = useState(true)
+  const [servicesData, setServicesData] = useState<Service[]>([])
+  const [categoriesData, setCategoriesData] = useState<string[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Comprehensive services data across all requested categories
-  const services: Service[] = [
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [servicesRes, categoriesRes] = await Promise.all([
+          servicesAPI.getServices({ limit: 200 }),
+          categoriesAPI.getCategories(),
+        ])
+
+        const normalizedServices: Service[] = (servicesRes.services || []).map((svc: any) => ({
+          id: svc._id,
+          name: svc.title,
+          provider: svc.providerName || svc.providerId?.displayName || "Provider",
+          image: svc.images || "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg",
+          price: svc.pricing || 0,
+          originalPrice: svc.originalPrice,
+          rating: svc.rating || 4.5,
+          reviews: svc.reviews || 0,
+          duration: svc.duration || "1-2 hours",
+          category: svc.categoryName || svc.categoryId?.name || "General",
+          description: svc.description || "",
+          features: svc.features || [],
+          distance: svc.distance || "Nearby",
+          availability: svc.availability || "available",
+          responseTime: svc.responseTime || "30 mins",
+          isOnline: svc.isOnline ?? true,
+        }))
+
+        setServicesData(normalizedServices)
+        setCategoriesData(["All Services", ...(categoriesRes || []).map((cat: any) => cat.name)])
+      } catch (error) {
+        console.error("Failed to load services page data", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  // Fallback static data for development when DB is empty
+  const services: Service[] = servicesData.length > 0 ? servicesData : [
     // Cleaning Services
     {
       id: "clean-1",
@@ -599,10 +642,10 @@ const ServicesPage: React.FC<ServicesPageProps> = ({
     }
   ]
 
-  const categories = [
+  const categories = categoriesData.length > 0 ? categoriesData : [
     "All Services",
     "Cleaning",
-    "AC Repair", 
+    "AC Repair",
     "Electrical",
     "Auto",
     "Towing",
@@ -702,6 +745,10 @@ const ServicesPage: React.FC<ServicesPageProps> = ({
         return [...filtered, category]
       }
     })
+  }
+
+  if (isLoading) {
+    return <div className="pt-20 text-center text-muted-foreground">Loading services...</div>
   }
 
   return (

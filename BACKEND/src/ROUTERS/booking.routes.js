@@ -1,30 +1,16 @@
 import { Router } from "express";
-
+import { verifyJWT } from "../MIDDLEWARES/auth.middlewares.js";
 import {
-    CreateBooking,
-    getBooking,
-    updateBookingStatus,
-    cancelBooking
+  CreateBooking,
+  getBooking,
+  getBookingById,
+  updateBookingStatus,
+  cancelBooking,
 } from "../CONTROLLERS/booking.controller.js";
 
 const router = Router();
 
-// router to create a booking
-
-router.route('/CreateBooking').post(CreateBooking);
-
-// router to get all bookings
-
-router.route("/").get(getBooking);
-
-
-// router to update booking status
-
-router.route("/:bookingId/status").put(updateBookingStatus);
-
-
-// router to cancel Booking
-router.route("/:bookingId/cancel").put(cancelBooking);
-
+router.route("/").post(verifyJWT, CreateBooking).get(verifyJWT, getBooking);
+router.route("/:bookingId").get(verifyJWT, getBookingById).put(verifyJWT, updateBookingStatus).delete(verifyJWT, cancelBooking);
 
 export default router;

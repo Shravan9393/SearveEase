@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { verifyJWT } from "../MIDDLEWARES/auth.middlewares.js";
+import { upload } from "../MIDDLEWARES/multer.middleware.js";
 import {
   createService,
   getAllServices,
@@ -10,13 +11,10 @@ import {
 
 const router = Router();
 
-// ✅ PUBLIC ROUTES (NO AUTH)
 router.get("/", getAllServices);
 router.get("/:serviceId", getServicesById);
-
-// ✅ PROTECTED ROUTES (PROVIDER ONLY)
-router.post("/", verifyJWT, createService);
-router.put("/:serviceId", verifyJWT, updateService);
+router.post("/", verifyJWT, upload.single("images"), createService);
+router.put("/:serviceId", verifyJWT, upload.single("images"), updateService);
 router.delete("/:serviceId", verifyJWT, deleteService);
 
 export default router;
