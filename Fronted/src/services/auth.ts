@@ -75,7 +75,7 @@ export const authAPI = {
     // Get current user
     getCurrentUser: async (): Promise<User> => {
         const response = await api.get('/users/me');
-        return response.data.data;
+        return response.data.data.user;
     },
 
     // Refresh token

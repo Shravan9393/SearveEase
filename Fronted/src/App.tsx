@@ -149,7 +149,7 @@ export default function App() {
     switch (currentPage) {
       case "home":
         // Show ProviderHomePage if user is logged in as a provider
-        if (isAuthenticated && user?.isProvider) {
+        if (isAuthenticated && user?.role === "provider") {
           return <ProviderHomePage user={user} />
         }
         // Show customer HomePage for everyone else (not logged in or customer)
@@ -180,7 +180,7 @@ export default function App() {
         )
       default:
         // Default to customer homepage
-        if (isAuthenticated && user?.isProvider) {
+        if (isAuthenticated && user?.role === "provider") {
           return <ProviderHomePage user={user} />
         }
         return <HomePage onNavigate={handleNavigate} onBookNow={handleBookNow} />
@@ -229,8 +229,8 @@ export default function App() {
         onTabChange={setCurrentPage}
         onAuthClick={handleAuthClick}
         isAuthenticated={isAuthenticated}
-        userAvatar={user?.avatar}
-        isProvider={user?.isProvider || false}
+        userAvatar={user?.profileImage}
+        isProvider={user?.role === "provider"}
       />
 
       {/* Enhanced Authentication Flow */}
