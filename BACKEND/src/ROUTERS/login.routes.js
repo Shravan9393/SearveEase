@@ -20,6 +20,6 @@ router.route("/google").post(googleAuth);
 router.route("/logout").post(verifyJWT , logoutUser);
 
 // Route to handle refresh access token
-router.route("/refresh-token").post(verifyJWT, refreshAccessToken);
+router.route("/refresh-token").post(refreshAccessToken);
 
 export default router;
