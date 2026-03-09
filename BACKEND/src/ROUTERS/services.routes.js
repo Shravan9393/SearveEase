@@ -13,6 +13,7 @@ const router = Router();
 
 router.get("/", getAllServices);
 router.get("/:serviceId", getServicesById);
+
 router.post("/", verifyJWT, upload.single("images"), createService);
 router.put("/:serviceId", verifyJWT, upload.single("images"), updateService);
 router.delete("/:serviceId", verifyJWT, deleteService);

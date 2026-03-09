@@ -1,4 +1,8 @@
+
 import React, { useEffect, useState } from "react"
+
+import React, { useState, useEffect } from "react"
+
 import { motion, AnimatePresence } from "motion/react"
 import { 
   Search, 
@@ -27,6 +31,9 @@ import { ImageWithFallback } from "./figma/ImageWithFallback"
 import { ChatModal, ServiceProvider } from "./ChatModal"
 import { CartItem } from "../App"
 import { servicesAPI, categoriesAPI } from "../services"
+
+import { servicesAPI, categoriesAPI, Service as BackendService } from "../services"
+
 
 interface Service {
   id: string
@@ -76,6 +83,7 @@ const ServicesPage: React.FC<ServicesPageProps> = ({
   const [servicesData, setServicesData] = useState<Service[]>([])
   const [categoriesData, setCategoriesData] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
+
 
   useEffect(() => {
     const loadData = async () => {
@@ -664,13 +672,49 @@ const ServicesPage: React.FC<ServicesPageProps> = ({
     "Computer Repair"
   ]
 
-  const sortOptions = [
-    { value: "relevance", label: "Relevance", icon: <Target size={16} /> },
-    { value: "popularity", label: "Popularity", icon: <TrendingUp size={16} /> },
-    { value: "rating", label: "Highest Rated", icon: <Star size={16} /> },
-    { value: "price-low", label: "Price: Low to High", icon: <DollarSign size={16} /> },
-    { value: "price-high", label: "Price: High to Low", icon: <DollarSign size={16} /> },
-  ]
+  const [services, setServices] = useState<Service[]>([])
+  const [categories, setCategories] = useState<string[]>(["All Services"])
+
+  useEffect(() => {
+    const fetchServicesData = async () => {
+      try {
+        const [servicesResponse, categoriesResponse] = await Promise.all([
+          servicesAPI.getServices({ limit: 100 }),
+          categoriesAPI.getCategories(),
+        ])
+
+        const mappedServices: Service[] = (servicesResponse.services || []).map((service: BackendService) => ({
+          id: service._id,
+          name: service.title,
+          provider: service.providerName,
+          image: service.images,
+          price: service.pricing,
+          originalPrice: service.originalPrice,
+          rating: service.rating,
+          reviews: service.reviews,
+          duration: service.duration,
+          category: service.categoryName,
+          description: service.description,
+          features: service.features || [],
+          distance: service.distance,
+          availability: service.availability,
+          responseTime: service.responseTime,
+          isOnline: service.isOnline,
+        }))
+
+        setServices(mappedServices)
+        setCategories([
+          "All Services",
+          ...(categoriesResponse || []).map((category: { name: string }) => category.name),
+        ])
+      } catch (error) {
+        console.error("Failed to fetch services page data", error)
+      }
+    }
+
+
+    fetchServicesData()
+  }, [])
 
   const filteredServices = services.filter(service => {
     const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
