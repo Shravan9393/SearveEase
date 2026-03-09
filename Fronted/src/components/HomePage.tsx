@@ -206,7 +206,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate, onBookNow }) => {
           {isLoadingCategories ? (
             <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
           ) : (
-            <CategoryChips selectedCategories={selectedCategories} onCategorySelect={handleCategorySelect} />
+            <CategoryChips categories={categories} selectedCategories={selectedCategories} onCategorySelect={handleCategorySelect} />
           )}
         </motion.section>
 

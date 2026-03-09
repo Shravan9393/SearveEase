@@ -78,8 +78,6 @@ export const authAPI = {
 
         return response.data.data.user || response.data.data;
 
-        return response.data.data.user;
-
     },
 
     // Refresh token
