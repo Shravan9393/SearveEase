@@ -24,11 +24,7 @@ const generateAccessAndRefreshToken = async (userId) => {
 /* ----------------------------------
    Google OAuth Setup
 ---------------------------------- */
-const googleClient = new OAuth2Client(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.GOOGLE_REDIRECT_URI
-);
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 /* ----------------------------------
    Google Login/Register
@@ -53,6 +49,10 @@ const googleAuth = asyncHandler(async (req, res) => {
 
   const { sub: googleId, email, name, picture } = payload;
 
+  if (!email) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Google account email is required");
+  }
+
   // Check if user exists
   let user = await User.findOne({ email });
 
@@ -61,7 +61,7 @@ const googleAuth = asyncHandler(async (req, res) => {
     if (!user.googleId) {
       user.googleId = googleId;
       user.isGoogleAccount = true;
-      if (picture && !user.profileImage.includes('google')) {
+      if (picture) {
         user.profileImage = picture;
       }
       await user.save();
@@ -130,7 +130,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
   const options = {
     httpOnly: true,
-    secure: false, // DEV
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
   };
 
@@ -157,7 +157,8 @@ const logoutUser = asyncHandler(async (req, res) => {
 
   const options = {
     httpOnly: true,
-    secure: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
   };
 
   return res
