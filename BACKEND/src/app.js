@@ -3,6 +3,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import dotenv from "dotenv";
 import errorHandler from "./MIDDLEWARES/error.middlewares.js";
 
 
@@ -30,7 +31,14 @@ import adminActionsRouter from './ROUTERS/admin_actions.routes.js';
 
 
 
+dotenv.config();
+
 const app = express();
+
+const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:3000,http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 
 // Middlewares
@@ -40,7 +48,14 @@ app.use(express.json({limit: '16kb'}));
 app.use(express.urlencoded({ extended: true, limit: '16kb' }));    
 
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origin ${origin} is not allowed by CORS`));
+    },
     credentials: true,
 }));
 

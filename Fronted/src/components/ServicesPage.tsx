@@ -77,6 +77,35 @@ const ServicesPage: React.FC<ServicesPageProps> = ({
   const [categories, setCategories] = useState<string[]>(["All Services"])
   const [isLoading, setIsLoading] = useState(true)
 
+
+  const sortOptions = [
+    {
+      value: "relevance",
+      label: "Relevance",
+      icon: <Target size={14} />,
+    },
+    {
+      value: "popularity",
+      label: "Popularity",
+      icon: <TrendingUp size={14} />,
+    },
+    {
+      value: "rating",
+      label: "Top Rated",
+      icon: <Award size={14} />,
+    },
+    {
+      value: "price-low",
+      label: "Price: Low to High",
+      icon: <DollarSign size={14} />,
+    },
+    {
+      value: "price-high",
+      label: "Price: High to Low",
+      icon: <ArrowRight size={14} />,
+    },
+  ]
+
   useEffect(() => {
     const fetchServicesData = async () => {
       try {
