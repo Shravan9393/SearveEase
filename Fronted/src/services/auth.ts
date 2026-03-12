@@ -13,6 +13,17 @@ export interface User {
     serviceCategory?: string;
     googleId?: string;
     isGoogleAccount?: boolean;
+    location?: {
+        city?: string;
+        state?: string;
+    } | null;
+    displayName?: string;
+    businessName?: string;
+    description?: string;
+    verified?: boolean;
+    rating?: number;
+    reviewCount?: number;
+    completedJobs?: number;
 }
 
 export interface AuthResponse {
@@ -21,9 +32,16 @@ export interface AuthResponse {
     refreshToken: string;
 }
 
+export interface CurrentUserResponse {
+    user: User;
+    profile: Record<string, unknown> | null;
+    profileData?: Partial<User>;
+}
+
 export interface LoginCredentials {
     email?: string;
     userName?: string;
+    identifier?: string;
     password: string;
 }
 
@@ -48,52 +66,42 @@ export interface RegisterProviderData {
 
 // Auth API functions
 export const authAPI = {
-    // Register customer
     registerCustomer: async (data: RegisterCustomerData): Promise<AuthResponse> => {
         const response = await api.post('/auth/register/customer', data);
         return response.data.data;
     },
 
-    // Register provider
     registerProvider: async (data: RegisterProviderData): Promise<AuthResponse> => {
         const response = await api.post('/auth/register/provider', data);
         return response.data.data;
     },
 
-    // Login
     login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
         const response = await api.post('/auth/login', credentials);
         return response.data.data;
     },
 
-    // Logout
     logout: async (): Promise<void> => {
         const response = await api.post('/auth/logout');
         return response.data.data;
     },
 
-    // Get current user
-    getCurrentUser: async (): Promise<User> => {
+    getCurrentUser: async (): Promise<CurrentUserResponse> => {
         const response = await api.get('/users/me');
-
-        return response.data.data.user || response.data.data;
-
+        return response.data.data;
     },
 
-    // Refresh token
     refreshToken: async (refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> => {
         const response = await api.post('/auth/refresh-token', { refreshToken });
         return response.data.data;
     },
 
-    // Google Login/Register
     googleLogin: async (googleToken: string): Promise<AuthResponse> => {
         const response = await api.post('/auth/google', { token: googleToken });
         return response.data.data;
     },
 };
 
-// Helper functions for localStorage
 export const setTokens = (accessToken: string, refreshToken: string): void => {
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);

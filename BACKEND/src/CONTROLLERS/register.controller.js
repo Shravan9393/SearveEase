@@ -25,19 +25,25 @@ const generateAccessAndRefreshToken = async (userId) => {
   return { accessToken, refreshToken };
 };
 
+const normalizeString = (value) => (typeof value === "string" ? value.trim() : "");
+
 /* ----------------------------------
    Register Customer
 ---------------------------------- */
 const registerCustomer = asyncHandler(async (req, res) => {
-  console.log("REGISTER CUSTOMER CONTROLLER HIT");
+  const userName = normalizeString(req.body.userName);
+  const email = normalizeString(req.body.email).toLowerCase();
+  const password = normalizeString(req.body.password);
+  const fullName = normalizeString(req.body.fullName);
+  const phone = normalizeString(req.body.phone);
 
-  const { userName, email, password, fullName, phone } = req.body;
-
-  if ([userName, email, password, fullName, phone].some((v) => !v?.trim())) {
+  if ([userName, email, password, fullName, phone].some((value) => !value)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "All fields are required");
   }
 
-  const existingUser = await User.findOne({ email });
+  const existingUser = await User.findOne({
+    $or: [{ email }, { userName: userName.toLowerCase() }],
+  });
   if (existingUser) {
     throw new ApiError(StatusCodes.CONFLICT, "User already exists");
   }
@@ -50,65 +56,43 @@ const registerCustomer = asyncHandler(async (req, res) => {
     role: "customer",
   });
 
-
   const customerProfile = await CustomerProfile.create({
     userId: user._id,
     fullName,
     phone,
   });
 
+  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
 
-  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
-    user._id
+  return res.status(StatusCodes.CREATED).json(
+    new ApiResponse(
+      StatusCodes.CREATED,
+      { user, customerProfile, accessToken, refreshToken },
+      "Customer registered successfully"
+    )
   );
-
-  return res
-    .status(StatusCodes.CREATED)
-    .json(
-      new ApiResponse(
-        StatusCodes.CREATED,
-        { user, customerProfile, accessToken, refreshToken },
-        "Customer registered successfully"
-      )
-    );
 });
 
 /* ----------------------------------
    Register Provider
 ---------------------------------- */
-
-
 const registerProvider = asyncHandler(async (req, res) => {
-  const {
-    userName,
-    email,
-    password,
-    fullName,
-    phone,
-    displayName,
-    businessName,
-    description,
-  } = req.body;
+  const userName = normalizeString(req.body.userName);
+  const email = normalizeString(req.body.email).toLowerCase();
+  const password = normalizeString(req.body.password);
+  const fullName = normalizeString(req.body.fullName);
+  const phone = normalizeString(req.body.phone);
+  const displayName = normalizeString(req.body.displayName);
+  const businessName = normalizeString(req.body.businessName);
+  const description = normalizeString(req.body.description);
 
-  if (
-    [
-      userName,
-      email,
-      password,
-      fullName,
-      phone,
-      displayName,
-      businessName,
-      description,
-    ].some((v) => !v?.trim())
-  ) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      "All required fields are mandatory"
-    );
+  if ([userName, email, password, fullName, phone, displayName].some((value) => !value)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "All required fields are mandatory");
   }
 
-  const existingUser = await User.findOne({ email });
+  const existingUser = await User.findOne({
+    $or: [{ email }, { userName: userName.toLowerCase() }],
+  });
   if (existingUser) {
     throw new ApiError(StatusCodes.CONFLICT, "User already exists");
   }
@@ -126,24 +110,19 @@ const registerProvider = asyncHandler(async (req, res) => {
     businessName,
     displayName,
     phone,
-    description,
-    pricing: { starting: 0 }, // default safe value
+    description: description || "Service provider",
+    pricing: { starting: 0 },
   });
 
-  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
-    user._id
+  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+
+  return res.status(StatusCodes.CREATED).json(
+    new ApiResponse(
+      StatusCodes.CREATED,
+      { user, providerProfile, accessToken, refreshToken },
+      "Provider registered successfully"
+    )
   );
-
-  return res
-    .status(StatusCodes.CREATED)
-    .json(
-      new ApiResponse(
-        StatusCodes.CREATED,
-        { user, providerProfile, accessToken, refreshToken },
-        "Provider registered successfully"
-      )
-    );
 });
-
 
 export { registerCustomer, registerProvider };

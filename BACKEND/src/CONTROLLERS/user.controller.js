@@ -31,9 +31,11 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user?._id).select(
-    "-password -refreshToken"
-  );
+  const user = await User.findById(req.user?._id).select("-password -refreshToken");
+
+  if (!user) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "User not found");
+  }
 
   let profile = null;
   if (user.role === "customer") {
@@ -42,15 +44,27 @@ const getCurrentUser = asyncHandler(async (req, res) => {
     profile = await ProviderProfile.findOne({ userId: user._id });
   }
 
-  return res
-    .status(StatusCodes.OK)
-    .json(
-      new ApiResponse(
-        StatusCodes.OK,
-        { user, profile },
-        "User fetched successfully"
-      )
-    );
+  const profileData = {
+    phone: profile?.phone || "",
+    profileImage: profile?.profileImage || user.profileImage,
+    location: profile?.location || null,
+    isProvider: user.role === "provider",
+    businessName: profile?.businessName || "",
+    displayName: profile?.displayName || "",
+    description: profile?.description || "",
+    verified: Boolean(profile?.verified),
+    rating: profile?.ratingSummary?.avg || 0,
+    reviewCount: profile?.ratingSummary?.count || 0,
+    completedJobs: profile?.reviewCount || 0,
+  };
+
+  return res.status(StatusCodes.OK).json(
+    new ApiResponse(
+      StatusCodes.OK,
+      { user, profile, profileData },
+      "User fetched successfully"
+    )
+  );
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {

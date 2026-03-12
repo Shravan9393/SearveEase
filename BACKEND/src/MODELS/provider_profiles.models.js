@@ -14,8 +14,8 @@ const providerProfileSchema = new mongoose.Schema(
     // 2️⃣ Business identity (AuthFlow)
     businessName: {
       type: String,
-      required: true,
       trim: true,
+      default: "",
     },
 
     displayName: {
@@ -72,7 +72,7 @@ const providerProfileSchema = new mongoose.Schema(
     // 4️⃣ Provider description & expertise
     description: {
       type: String,
-      required: true,
+      default: "",
     },
 
     yearsOfExperience: {
