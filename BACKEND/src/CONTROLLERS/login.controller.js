@@ -106,18 +106,25 @@ const googleAuth = asyncHandler(async (req, res) => {
     );
 });
 
+const normalizeString = (value) => (typeof value === "string" ? value.trim() : "");
+
 /* ----------------------------------
    Login
 ---------------------------------- */
 const loginUser = asyncHandler(async (req, res) => {
-  const { email, userName, password } = req.body;
+  const email = normalizeString(req.body.email).toLowerCase();
+  const userName = normalizeString(req.body.userName).toLowerCase();
+  const identifier = normalizeString(req.body.identifier).toLowerCase();
+  const password = normalizeString(req.body.password);
 
-  if (!(email || userName) || !password) {
+  const loginIdentifier = identifier || email || userName;
+
+  if (!loginIdentifier || !password) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Credentials required");
   }
 
   const user = await User.findOne({
-    $or: [{ email }, { userName }],
+    $or: [{ email: loginIdentifier }, { userName: loginIdentifier }],
   }).select("+password +refreshToken");
 
   if (!user || !(await user.isPasswordCorrect(password))) {

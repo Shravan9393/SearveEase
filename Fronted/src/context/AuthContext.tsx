@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode, FC, ReactElement } from 'react';
-import { authAPI, setTokens, clearTokens, setUser, getUser, User } from '../services/auth';
+import { authAPI, setTokens, clearTokens, setUser, getUser, User, CurrentUserResponse } from '../services/auth';
 
 interface AuthContextType {
     user: User | null;
@@ -30,35 +30,69 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const mergeUserProfile = (payload: CurrentUserResponse): User => {
+    const baseUser = payload.user;
+    const profile = payload.profile as Record<string, any> | null;
+    const profileData = payload.profileData || {};
+
+    return {
+        ...baseUser,
+        ...profileData,
+        phone: profileData.phone || profile?.phone || baseUser.phone,
+        profileImage: profileData.profileImage || profile?.profileImage || baseUser.profileImage,
+        location: profileData.location || profile?.location || null,
+        isProvider: baseUser.role === 'provider',
+        displayName: profileData.displayName || profile?.displayName,
+        businessName: profileData.businessName || profile?.businessName,
+        description: profileData.description || profile?.description,
+        verified: Boolean(profileData.verified ?? profile?.verified),
+        rating: Number(profileData.rating ?? profile?.ratingSummary?.avg ?? 0),
+        reviewCount: Number(profileData.reviewCount ?? profile?.ratingSummary?.count ?? 0),
+        completedJobs: Number(profileData.completedJobs ?? profile?.reviewCount ?? 0),
+    };
+};
+
 export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactElement => {
     const [user, setUserState] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Check for existing user on mount
-        const storedUser = getUser();
-        const tokens = localStorage.getItem('accessToken');
-        
-        if (storedUser && tokens) {
-            setUserState(storedUser);
-        }
-        setIsLoading(false);
+        const bootstrapAuth = async () => {
+            const storedUser = getUser();
+            const token = localStorage.getItem('accessToken');
+
+            if (storedUser && token) {
+                setUserState(storedUser);
+                try {
+                    await refreshUser();
+                } catch {
+                    clearTokens();
+                    setUserState(null);
+                }
+            }
+
+            setIsLoading(false);
+        };
+
+        bootstrapAuth();
     }, []);
 
     const login = async (email: string, password: string) => {
         const response = await authAPI.login({ email, password });
-        
+
         setTokens(response.accessToken, response.refreshToken);
         setUser(response.user);
         setUserState(response.user);
+        await refreshUser();
     };
 
     const googleLogin = async (googleToken: string) => {
         const response = await authAPI.googleLogin(googleToken);
-        
+
         setTokens(response.accessToken, response.refreshToken);
         setUser(response.user);
         setUserState(response.user);
+        await refreshUser();
     };
 
     const registerCustomer = async (data: {
@@ -69,10 +103,11 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactEl
         phone: string;
     }) => {
         const response = await authAPI.registerCustomer(data);
-        
+
         setTokens(response.accessToken, response.refreshToken);
         setUser(response.user);
         setUserState(response.user);
+        await refreshUser();
     };
 
     const registerProvider = async (data: {
@@ -86,10 +121,11 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactEl
         description: string;
     }) => {
         const response = await authAPI.registerProvider(data);
-        
+
         setTokens(response.accessToken, response.refreshToken);
         setUser(response.user);
         setUserState(response.user);
+        await refreshUser();
     };
 
     const logout = () => {
@@ -100,9 +136,10 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactEl
 
     const refreshUser = async () => {
         try {
-            const currentUser = await authAPI.getCurrentUser();
-            setUser(currentUser);
-            setUserState(currentUser);
+            const currentUserPayload = await authAPI.getCurrentUser();
+            const mergedUser = mergeUserProfile(currentUserPayload);
+            setUser(mergedUser);
+            setUserState(mergedUser);
         } catch (error) {
             logout();
         }
