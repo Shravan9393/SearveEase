@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { DB_NAME } from "../constant.js";
 
 const connectDB = async () => {
   try {
@@ -8,12 +7,10 @@ const connectDB = async () => {
       throw new Error("MONGODB_URI is required");
     }
 
-    const finalUri = mongoUri.includes("mongodb+srv://") || mongoUri.includes(`/${DB_NAME}`)
-      ? mongoUri
-      : `${mongoUri.replace(/\/$/, "")}/${DB_NAME}`;
-
-    const connectInstance = await mongoose.connect(finalUri);
-    console.log(`Connected to DB Successfully !! DB HOST : ${connectInstance.connection.host}`);
+    const connectInstance = await mongoose.connect(mongoUri);
+    console.log(
+      `Connected to DB Successfully !! HOST: ${connectInstance.connection.host} | DB: ${connectInstance.connection.name}`
+    );
   } catch (error) {
     console.error("Error in connecting to DB", error);
     process.exit(1);

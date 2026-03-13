@@ -5,6 +5,7 @@ import { asyncHandler } from "../UTILS/asyncHandler.js";
 import { ApiError } from "../UTILS/apiError.js";
 import { ApiResponse } from "../UTILS/apiResponse.js";
 import { StatusCodes } from "http-status-codes";
+import mongoose from "mongoose";
 
 /* ----------------------------------
    Token Generator
@@ -97,22 +98,40 @@ const registerProvider = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.CONFLICT, "User already exists");
   }
 
-  const user = await User.create({
-    userName: userName.toLowerCase(),
-    fullName,
-    email,
-    password,
-    role: "provider",
+  const session = await mongoose.startSession();
+  let user;
+  let providerProfile;
+
+  await session.withTransaction(async () => {
+    user = await User.create(
+      [
+        {
+          userName: userName.toLowerCase(),
+          fullName,
+          email,
+          password,
+          role: "provider",
+        },
+      ],
+      { session }
+    ).then((docs) => docs[0]);
+
+    providerProfile = await ProviderProfile.create(
+      [
+        {
+          userId: user._id,
+          businessName,
+          displayName,
+          phone,
+          description: description || "Service provider",
+          pricing: { starting: 0 },
+        },
+      ],
+      { session }
+    ).then((docs) => docs[0]);
   });
 
-  const providerProfile = await ProviderProfile.create({
-    userId: user._id,
-    businessName,
-    displayName,
-    phone,
-    description: description || "Service provider",
-    pricing: { starting: 0 },
-  });
+  await session.endSession();
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
 

@@ -41,7 +41,7 @@ const customerProfileSchema = new mongoose.Schema(
       match: [/^[0-9]{10}$/, "Please provide a valid 10-digit phone number"],
     },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "customerprofiles" }
 );
 
 export const CustomerProfile = mongoose.model(

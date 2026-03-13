@@ -30,6 +30,8 @@ export interface AuthResponse {
     user: User;
     accessToken: string;
     refreshToken: string;
+    isFirstGoogleLogin?: boolean;
+    requiresProviderProfileCompletion?: boolean;
 }
 
 export interface CurrentUserResponse {
@@ -96,8 +98,18 @@ export const authAPI = {
         return response.data.data;
     },
 
-    googleLogin: async (googleToken: string): Promise<AuthResponse> => {
-        const response = await api.post('/auth/google', { token: googleToken });
+    googleLogin: async (googleToken: string, role: 'customer' | 'provider' = 'customer'): Promise<AuthResponse> => {
+        const response = await api.post('/auth/google', { token: googleToken, role });
+        return response.data.data;
+    },
+
+    completeProviderProfile: async (data: {
+        displayName: string;
+        phone: string;
+        businessName: string;
+        description: string;
+    }) => {
+        const response = await api.post('/auth/provider-profile/complete', data);
         return response.data.data;
     },
 };

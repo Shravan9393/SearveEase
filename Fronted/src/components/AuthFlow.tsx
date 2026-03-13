@@ -21,13 +21,14 @@ type AuthMode = 'signin' | 'signup'
 type LoginMethod = 'email' | 'phone'
 
 const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) => {
-  const { login, registerCustomer, registerProvider, googleLogin } = useAuth()
+  const { login, registerCustomer, registerProvider, googleLogin, completeProviderProfile } = useAuth()
   const [currentStep, setCurrentStep] = useState<AuthStep>('welcome')
   const [authMode, setAuthMode] = useState<AuthMode>('signin')
   const [userType, setUserType] = useState<UserType>('customer')
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('email')
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [isCompletingGoogleProviderProfile, setIsCompletingGoogleProviderProfile] = useState(false)
 
   // User credentials form data
   const [credentialsData, setCredentialsData] = useState({
@@ -194,8 +195,15 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
   const handleSubmit = useCallback(async () => {
     setIsLoading(true)
     try {
-      if (authMode === 'signin') {
-        await login(credentialsData.email, credentialsData.password)
+      if (isCompletingGoogleProviderProfile) {
+        await completeProviderProfile({
+          displayName: credentialsData.name || providerData.businessName,
+          phone: credentialsData.phone || '9999999999',
+          businessName: providerData.businessName,
+          description: providerData.description || 'Service provider',
+        })
+      } else if (authMode === 'signin') {
+        await login(loginMethod === 'email' ? credentialsData.email : credentialsData.phone, credentialsData.password)
       } else if (userType === 'customer') {
         await registerCustomer({
           userName: credentialsData.email.split('@')[0] || credentialsData.name.replace(/\s+/g, '').toLowerCase(),
@@ -219,7 +227,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
 
       onAuthComplete({
         name: credentialsData.name || credentialsData.email,
-        isProvider: userType === 'provider',
+        isProvider: userType === 'provider' || isCompletingGoogleProviderProfile,
         serviceCategory: providerData.serviceCategory,
       })
       onClose()
@@ -228,7 +236,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
     } finally {
       setIsLoading(false)
     }
-  }, [authMode, credentialsData, userType, providerData, login, registerCustomer, registerProvider, onAuthComplete, onClose])
+  }, [isCompletingGoogleProviderProfile, authMode, credentialsData, userType, providerData, completeProviderProfile, login, registerCustomer, registerProvider, onAuthComplete, onClose])
 
   const handleSocialLogin = useCallback(async (provider: 'google') => {
     if (provider !== 'google') return
@@ -251,10 +259,16 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
         callback: async (response: { credential?: string }) => {
           if (!response.credential) return
           try {
-            await googleLogin(response.credential)
+            const googleResult = await googleLogin(response.credential, userType)
+            if (userType === 'provider' && googleResult.requiresProviderProfileCompletion) {
+              setIsCompletingGoogleProviderProfile(true)
+              setAuthMode('signup')
+              setCurrentStep('providerDetails')
+              return
+            }
             onAuthComplete({
               name: 'Google User',
-              isProvider: false,
+              isProvider: userType === 'provider',
             })
             onClose()
           } catch (error) {
@@ -278,7 +292,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
     }
 
     launchGoogle()
-  }, [googleLogin, onAuthComplete, onClose])
+  }, [googleLogin, onAuthComplete, onClose, userType])
 
   const renderWelcomeStep = () => (
     <div className="text-center space-y-8">

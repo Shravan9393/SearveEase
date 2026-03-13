@@ -129,7 +129,7 @@ const providerProfileSchema = new mongoose.Schema(
       default: false,
     },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "providerprofiles" }
 );
 
 export const ProviderProfile = mongoose.model(
