@@ -27,6 +27,7 @@ const updateProviderProfile = asyncHandler(async (req, res) => {
   const {
     phone,
     businessName,
+    displayName,
     description,
     yearsOfExperience,
     categories,
@@ -37,22 +38,35 @@ const updateProviderProfile = asyncHandler(async (req, res) => {
 
   const userId = req.user._id;
 
-  const profile = await ProviderProfile.findOne({ userId });
-  if (!profile) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Profile not found");
+  const user = await User.findById(userId);
+  if (!user || user.role !== "provider") {
+    throw new ApiError(StatusCodes.FORBIDDEN, "Only providers can manage provider profiles");
   }
 
-  if (phone) profile.phone = phone;
-  if (businessName) profile.businessName = businessName;
-  if (description) profile.description = description;
+  const profile =
+    (await ProviderProfile.findOne({ userId })) ||
+    new ProviderProfile({
+      userId,
+      displayName: displayName || user.fullName,
+      pricing: { starting: 0 },
+    });
+
+  if (phone !== undefined) profile.phone = phone;
+  if (businessName !== undefined) profile.businessName = businessName;
+  if (displayName !== undefined) profile.displayName = displayName;
+  if (description !== undefined) profile.description = description;
   if (yearsOfExperience !== undefined)
     profile.yearsOfExperience = yearsOfExperience;
 
-  // ✅ REQUIRED FOR SEEDING
   if (categories) profile.categories = categories;
   if (services) profile.services = services;
 
-  if (pricing) profile.pricing = pricing;
+  if (pricing) {
+    profile.pricing = {
+      ...profile.pricing,
+      ...pricing,
+    };
+  }
   if (location) profile.location = location;
 
   await profile.save();

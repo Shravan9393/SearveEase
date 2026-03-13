@@ -5,6 +5,7 @@ import { asyncHandler } from "../UTILS/asyncHandler.js";
 import { ApiError } from "../UTILS/apiError.js";
 import { ApiResponse } from "../UTILS/apiResponse.js";
 import { StatusCodes } from "http-status-codes";
+import mongoose from "mongoose";
 
 /* ----------------------------------
    Token Generator
@@ -97,29 +98,64 @@ const registerProvider = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.CONFLICT, "User already exists");
   }
 
-  const user = await User.create({
-    userName: userName.toLowerCase(),
-    fullName,
-    email,
-    password,
-    role: "provider",
-  });
+  const session = await mongoose.startSession();
+  let user;
+  let providerProfile;
 
-  const providerProfile = await ProviderProfile.create({
-    userId: user._id,
-    businessName,
-    displayName,
-    phone,
-    description: description || "Service provider",
-    pricing: { starting: 0 },
-  });
+  try {
+    await session.withTransaction(async () => {
+      user = await User.create(
+        [
+          {
+            userName: userName.toLowerCase(),
+            fullName,
+            email,
+            password,
+            role: "provider",
+          },
+        ],
+        { session }
+      );
 
-  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+      providerProfile = await ProviderProfile.create(
+        [
+          {
+            userId: user[0]._id,
+            businessName,
+            displayName,
+            phone,
+            description: description || "Service provider",
+            pricing: { starting: 0 },
+          },
+        ],
+        { session }
+      );
+    });
+  } finally {
+    await session.endSession();
+  }
+
+  const createdUser = user?.[0];
+  const createdProviderProfile = providerProfile?.[0];
+
+  if (!createdUser || !createdProviderProfile) {
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      "Failed to create provider account"
+    );
+  }
+
+  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(createdUser._id);
 
   return res.status(StatusCodes.CREATED).json(
     new ApiResponse(
       StatusCodes.CREATED,
-      { user, providerProfile, accessToken, refreshToken },
+      {
+        user: createdUser,
+        providerProfile: createdProviderProfile,
+        accessToken,
+        refreshToken,
+      },
       "Provider registered successfully"
     )
   );

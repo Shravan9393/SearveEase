@@ -30,6 +30,8 @@ export interface AuthResponse {
     user: User;
     accessToken: string;
     refreshToken: string;
+    profileCompletionRequired?: boolean;
+    onboardingRole?: 'customer' | 'provider';
 }
 
 export interface CurrentUserResponse {
@@ -96,8 +98,8 @@ export const authAPI = {
         return response.data.data;
     },
 
-    googleLogin: async (googleToken: string): Promise<AuthResponse> => {
-        const response = await api.post('/auth/google', { token: googleToken });
+    googleLogin: async (googleToken: string, role?: 'customer' | 'provider'): Promise<AuthResponse> => {
+        const response = await api.post('/auth/google', { token: googleToken, role });
         return response.data.data;
     },
 };

@@ -65,8 +65,8 @@ export default function App() {
     }
   }, [])
 
-  const handleLogout = useCallback(() => {
-    authLogout()
+  const handleLogout = useCallback(async () => {
+    await authLogout()
     setCurrentPage("home")
   }, [authLogout])
 

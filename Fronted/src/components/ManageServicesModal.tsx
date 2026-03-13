@@ -33,38 +33,7 @@ export const ManageServicesModal: React.FC<ManageServicesModalProps> = ({
   isOpen,
   onClose
 }) => {
-  const [services, setServices] = useState<Service[]>([
-    {
-      id: "1",
-      name: "AC Repair & Maintenance",
-      price: "₹500-1500",
-      description: "Complete AC servicing, gas refilling, and repair services for all brands",
-      status: 'active',
-      bookings: 24,
-      views: 245,
-      rating: 4.9
-    },
-    {
-      id: "2",
-      name: "Emergency Repair Service",
-      price: "₹800-2000",
-      description: "24/7 emergency repair service for urgent AC issues",
-      status: 'active',
-      bookings: 15,
-      views: 178,
-      rating: 4.7
-    },
-    {
-      id: "3",
-      name: "Regular Maintenance",
-      price: "₹300-800",
-      description: "Scheduled maintenance to keep your AC running efficiently",
-      status: 'active',
-      bookings: 48,
-      views: 312,
-      rating: 4.8
-    }
-  ])
+  const [services, setServices] = useState<Service[]>([])
 
   const [isAddingService, setIsAddingService] = useState(false)
   const [editingService, setEditingService] = useState<string | null>(null)

@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from "react"
 import { useAuth } from "../context/AuthContext"
+import { api } from "../services/api"
 import { motion, AnimatePresence } from "motion/react"
 import { X, Mail, Lock, Eye, EyeOff, User, Phone, Sparkles, ArrowLeft, Briefcase, ShoppingBag, Star, MapPin, Camera, Upload } from "lucide-react"
 import { Button } from "./ui/button"
@@ -21,7 +22,7 @@ type AuthMode = 'signin' | 'signup'
 type LoginMethod = 'email' | 'phone'
 
 const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) => {
-  const { login, registerCustomer, registerProvider, googleLogin } = useAuth()
+  const { login, registerCustomer, registerProvider, googleLogin, user, refreshUser } = useAuth()
   const [currentStep, setCurrentStep] = useState<AuthStep>('welcome')
   const [authMode, setAuthMode] = useState<AuthMode>('signin')
   const [userType, setUserType] = useState<UserType>('customer')
@@ -195,26 +196,39 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
     setIsLoading(true)
     try {
       if (authMode === 'signin') {
-        await login(credentialsData.email, credentialsData.password)
+        await login(credentialsData.email || credentialsData.phone, credentialsData.password)
       } else if (userType === 'customer') {
         await registerCustomer({
           userName: credentialsData.email.split('@')[0] || credentialsData.name.replace(/\s+/g, '').toLowerCase(),
-          email: credentialsData.email,
+          email: credentialsData.email || `${credentialsData.name.replace(/\s+/g, '').toLowerCase()}@gmail.local`,
           password: credentialsData.password,
           fullName: credentialsData.name,
           phone: credentialsData.phone || '9999999999',
         })
       } else {
-        await registerProvider({
-          userName: credentialsData.email.split('@')[0] || credentialsData.name.replace(/\s+/g, '').toLowerCase(),
-          email: credentialsData.email,
-          password: credentialsData.password,
-          fullName: credentialsData.name,
-          phone: credentialsData.phone || '9999999999',
-          displayName: credentialsData.name,
-          businessName: providerData.businessName,
-          description: providerData.description || 'Service provider',
-        })
+        const isGoogleProviderCompletion = user?.role === 'provider' && !credentialsData.password
+
+        if (isGoogleProviderCompletion) {
+          await api.patch('/provider-profiles', {
+            displayName: credentialsData.name || user.fullName,
+            businessName: providerData.businessName,
+            description: providerData.description || 'Service provider',
+            phone: credentialsData.phone || user.phone || '9999999999',
+            location: providerData.location ? { city: providerData.location } : undefined,
+          })
+          await refreshUser()
+        } else {
+          await registerProvider({
+            userName: credentialsData.email.split('@')[0] || credentialsData.name.replace(/\s+/g, '').toLowerCase(),
+            email: credentialsData.email || `${credentialsData.name.replace(/\s+/g, '').toLowerCase()}@gmail.local`,
+            password: credentialsData.password,
+            fullName: credentialsData.name,
+            phone: credentialsData.phone || '9999999999',
+            displayName: credentialsData.name,
+            businessName: providerData.businessName,
+            description: providerData.description || 'Service provider',
+          })
+        }
       }
 
       onAuthComplete({
@@ -228,7 +242,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
     } finally {
       setIsLoading(false)
     }
-  }, [authMode, credentialsData, userType, providerData, login, registerCustomer, registerProvider, onAuthComplete, onClose])
+  }, [authMode, credentialsData, userType, providerData, login, registerCustomer, registerProvider, onAuthComplete, onClose, user, refreshUser])
 
   const handleSocialLogin = useCallback(async (provider: 'google') => {
     if (provider !== 'google') return
@@ -251,10 +265,17 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
         callback: async (response: { credential?: string }) => {
           if (!response.credential) return
           try {
-            await googleLogin(response.credential)
+            const result = await googleLogin(response.credential, userType)
+
+            if (result.role === 'provider' && result.profileCompletionRequired) {
+              setAuthMode('signup')
+              setCurrentStep('providerDetails')
+              return
+            }
+
             onAuthComplete({
               name: 'Google User',
-              isProvider: false,
+              isProvider: result.role === 'provider',
             })
             onClose()
           } catch (error) {
@@ -278,7 +299,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
     }
 
     launchGoogle()
-  }, [googleLogin, onAuthComplete, onClose])
+  }, [googleLogin, onAuthComplete, onClose, userType])
 
   const renderWelcomeStep = () => (
     <div className="text-center space-y-8">

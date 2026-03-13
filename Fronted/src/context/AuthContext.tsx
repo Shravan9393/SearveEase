@@ -6,7 +6,7 @@ interface AuthContextType {
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (email: string, password: string) => Promise<void>;
-    googleLogin: (googleToken: string) => Promise<void>;
+    googleLogin: (googleToken: string, role?: "customer" | "provider") => Promise<{ profileCompletionRequired: boolean; role: "customer" | "provider" | "admin" }>;
     registerCustomer: (data: {
         userName: string;
         email: string;
@@ -24,7 +24,7 @@ interface AuthContextType {
         businessName: string;
         description: string;
     }) => Promise<void>;
-    logout: () => void;
+    logout: () => Promise<void>;
     refreshUser: () => Promise<void>;
 }
 
@@ -86,13 +86,18 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactEl
         await refreshUser();
     };
 
-    const googleLogin = async (googleToken: string) => {
-        const response = await authAPI.googleLogin(googleToken);
+    const googleLogin = async (googleToken: string, role?: "customer" | "provider") => {
+        const response = await authAPI.googleLogin(googleToken, role);
 
         setTokens(response.accessToken, response.refreshToken);
         setUser(response.user);
         setUserState(response.user);
         await refreshUser();
+
+        return {
+            profileCompletionRequired: Boolean(response.profileCompletionRequired),
+            role: response.user.role,
+        };
     };
 
     const registerCustomer = async (data: {
@@ -128,8 +133,13 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactEl
         await refreshUser();
     };
 
-    const logout = () => {
-        authAPI.logout().catch(() => {});
+    const logout = async () => {
+        try {
+            await authAPI.logout();
+        } catch (error) {
+            // Ignore API logout failures and clear local state anyway
+        }
+
         clearTokens();
         setUserState(null);
     };
@@ -141,7 +151,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactEl
             setUser(mergedUser);
             setUserState(mergedUser);
         } catch (error) {
-            logout();
+            await logout();
         }
     };
 
