@@ -119,5 +119,5 @@ const serviceSchema = new mongoose.Schema(
 serviceSchema.index({ providerId: 1 });
 serviceSchema.index({ categoryId: 1 });
 
-const Service = mongoose.model("Service", serviceSchema);
+const Service = mongoose.model("Service", serviceSchema, "services");
 export default Service;

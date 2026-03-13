@@ -6,7 +6,13 @@ interface AuthContextType {
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (email: string, password: string) => Promise<void>;
-    googleLogin: (googleToken: string) => Promise<void>;
+    googleLogin: (googleToken: string, role?: 'customer' | 'provider') => Promise<User>;
+    completeProviderProfile: (data: {
+        displayName: string;
+        phone: string;
+        businessName?: string;
+        description?: string;
+    }) => Promise<void>;
     registerCustomer: (data: {
         userName: string;
         email: string;
@@ -86,12 +92,23 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactEl
         await refreshUser();
     };
 
-    const googleLogin = async (googleToken: string) => {
-        const response = await authAPI.googleLogin(googleToken);
+    const googleLogin = async (googleToken: string, role?: 'customer' | 'provider'): Promise<User> => {
+        const response = await authAPI.googleLogin(googleToken, role);
 
         setTokens(response.accessToken, response.refreshToken);
         setUser(response.user);
         setUserState(response.user);
+        await refreshUser();
+        return response.user;
+    };
+
+    const completeProviderProfile = async (data: {
+        displayName: string;
+        phone: string;
+        businessName?: string;
+        description?: string;
+    }) => {
+        await authAPI.completeProviderProfile(data);
         await refreshUser();
     };
 
@@ -157,6 +174,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactEl
                 registerProvider,
                 logout,
                 refreshUser,
+                completeProviderProfile,
             }}
         >
             {children}

@@ -46,5 +46,6 @@ const customerProfileSchema = new mongoose.Schema(
 
 export const CustomerProfile = mongoose.model(
   "CustomerProfile",
-  customerProfileSchema
+  customerProfileSchema,
+  "customerprofiles"
 );
