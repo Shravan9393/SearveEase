@@ -24,6 +24,7 @@ export interface User {
     rating?: number;
     reviewCount?: number;
     completedJobs?: number;
+    needsProviderProfileCompletion?: boolean;
 }
 
 export interface AuthResponse {
@@ -98,7 +99,11 @@ export const authAPI = {
         return response.data.data;
     },
 
+
+    googleLogin: async (googleToken: string, role?: 'customer' | 'provider'): Promise<AuthResponse> => {
+
     googleLogin: async (googleToken: string, role: 'customer' | 'provider' = 'customer'): Promise<AuthResponse> => {
+
         const response = await api.post('/auth/google', { token: googleToken, role });
         return response.data.data;
     },
@@ -106,10 +111,17 @@ export const authAPI = {
     completeProviderProfile: async (data: {
         displayName: string;
         phone: string;
+
+        businessName?: string;
+        description?: string;
+    }) => {
+        const response = await api.post('/auth/provider/complete-profile', data);
+
         businessName: string;
         description: string;
     }) => {
         const response = await api.post('/auth/provider-profile/complete', data);
+
         return response.data.data;
     },
 };
