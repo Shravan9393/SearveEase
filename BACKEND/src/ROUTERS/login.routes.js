@@ -14,6 +14,8 @@ router.route("/login").post(loginUser);
 router.route("/google").post(googleAuth);
 router.route("/logout").post(logoutUser);
 router.route("/refresh-token").post(refreshAccessToken);
+
 router.route("/provider/complete-profile").post(verifyJWT, completeProviderProfile);
+router.route("/provider-profile/complete").post(verifyJWT, completeProviderProfile);
 
 export default router;

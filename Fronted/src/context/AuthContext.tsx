@@ -5,6 +5,7 @@ interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
+
     login: (email: string, password: string) => Promise<void>;
     googleLogin: (googleToken: string, role?: 'customer' | 'provider') => Promise<User>;
     completeProviderProfile: (data: {
@@ -12,6 +13,15 @@ interface AuthContextType {
         phone: string;
         businessName?: string;
         description?: string;
+
+    login: (identifier: string, password: string) => Promise<void>;
+    googleLogin: (googleToken: string, role?: 'customer' | 'provider') => Promise<AuthResult>;
+    completeProviderProfile: (data: {
+        displayName: string;
+        phone: string;
+        businessName: string;
+        description: string;
+
     }) => Promise<void>;
     registerCustomer: (data: {
         userName: string;
@@ -35,6 +45,10 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+interface AuthResult {
+    requiresProviderProfileCompletion?: boolean;
+}
 
 const mergeUserProfile = (payload: CurrentUserResponse): User => {
     const baseUser = payload.user;
@@ -83,8 +97,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactEl
         bootstrapAuth();
     }, []);
 
-    const login = async (email: string, password: string) => {
-        const response = await authAPI.login({ email, password });
+    const login = async (identifier: string, password: string) => {
+        const response = await authAPI.login({ identifier, password });
 
         setTokens(response.accessToken, response.refreshToken);
         setUser(response.user);
@@ -92,21 +106,34 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactEl
         await refreshUser();
     };
 
+
     const googleLogin = async (googleToken: string, role?: 'customer' | 'provider'): Promise<User> => {
+
+    const googleLogin = async (googleToken: string, role: 'customer' | 'provider' = 'customer'): Promise<AuthResult> => {
+
         const response = await authAPI.googleLogin(googleToken, role);
 
         setTokens(response.accessToken, response.refreshToken);
         setUser(response.user);
         setUserState(response.user);
         await refreshUser();
+
         return response.user;
+
+        return { requiresProviderProfileCompletion: response.requiresProviderProfileCompletion };
+
     };
 
     const completeProviderProfile = async (data: {
         displayName: string;
         phone: string;
+
         businessName?: string;
         description?: string;
+
+        businessName: string;
+        description: string;
+
     }) => {
         await authAPI.completeProviderProfile(data);
         await refreshUser();
@@ -170,6 +197,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactEl
                 isLoading,
                 login,
                 googleLogin,
+                completeProviderProfile,
                 registerCustomer,
                 registerProvider,
                 logout,

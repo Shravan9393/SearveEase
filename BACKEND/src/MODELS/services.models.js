@@ -113,7 +113,7 @@ const serviceSchema = new mongoose.Schema(
       default: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "services" }
 );
 
 serviceSchema.index({ providerId: 1 });
