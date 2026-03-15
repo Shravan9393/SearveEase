@@ -231,6 +231,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
           password: credentialsData.password,
           fullName: credentialsData.name,
           phone: credentialsData.phone || '9999999999',
+          profileImage: customerProfileData.profileImage,
         })
       } else {
         await registerProvider({
@@ -242,6 +243,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
           displayName: credentialsData.name,
           businessName: providerData.businessName,
           description: providerData.description || 'Service provider',
+          profileImage: providerData.profileImage,
         })
       }
 
@@ -256,7 +258,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
     } finally {
       setIsLoading(false)
     }
-  }, [isCompletingGoogleProviderProfile, authMode, credentialsData, userType, providerData, completeProviderProfile, login, registerCustomer, registerProvider, onAuthComplete, onClose])
+  }, [isCompletingGoogleProviderProfile, authMode, credentialsData, userType, customerProfileData, providerData, completeProviderProfile, login, registerCustomer, registerProvider, onAuthComplete, onClose])
 
   const handleSocialLogin = useCallback(async (provider: 'google') => {
     if (provider !== 'google') return
