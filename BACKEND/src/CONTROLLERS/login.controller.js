@@ -8,16 +8,11 @@ import { OAuth2Client } from "google-auth-library";
 import { ProviderProfile } from "../MODELS/provider_profiles.models.js";
 import { CustomerProfile } from "../MODELS/customer_profiles.models.js";
 
-
 /* ----------------------------------
    Token Generator
 ---------------------------------- */
 const generateAccessAndRefreshToken = async (userId) => {
   const user = await User.findById(userId).select("+refreshToken");
-
-  if (!user) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "User not found");
-  }
 
   const accessToken = user.generateAccessToken();
   const refreshToken = user.generateRefreshToken();
@@ -37,9 +32,6 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
    Google Login/Register
 ---------------------------------- */
 const googleAuth = asyncHandler(async (req, res) => {
-
-  const { token, role } = req.body;
-
   const { token } = req.body;
   const requestedRole = ["customer", "provider"].includes(req.body.role)
     ? req.body.role
@@ -89,20 +81,13 @@ const googleAuth = asyncHandler(async (req, res) => {
       fullName: name || email.split('@')[0],
       email,
       password: Math.random().toString(36).slice(-8), // Random password for Google accounts
-      role: role === "provider" ? "provider" : "customer",
+      role: "customer",
       googleId,
       isGoogleAccount: true,
       profileImage: picture || "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg",
     });
     isFirstGoogleLogin = true;
   }
-
-  let needsProviderProfileCompletion = false;
-  if (user.role === "provider") {
-    const providerProfile = await ProviderProfile.findOne({ userId: user._id });
-    needsProviderProfileCompletion = !providerProfile;
-  }
-
 
   if (requestedRole === "provider" && user.role !== "provider") {
     user.role = "provider";
@@ -131,19 +116,11 @@ const googleAuth = asyncHandler(async (req, res) => {
       new ApiResponse(
         StatusCodes.OK,
         {
-          user: {
-            ...user.toJSON(),
-            needsProviderProfileCompletion,
-          },
-          accessToken,
-          refreshToken,
-
           user,
           accessToken,
           refreshToken,
           isFirstGoogleLogin,
           requiresProviderProfileCompletion,
-
         },
         "User logged in successfully with Google"
       )
@@ -172,20 +149,6 @@ const loginUser = asyncHandler(async (req, res) => {
     $or: [{ email: loginIdentifier }, { userName: loginIdentifier }],
   }).select("+password +refreshToken");
 
-
-  if (!user) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid credentials");
-  }
-
-  if (user.isGoogleAccount && !user.password) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      "This account uses Google Sign-In. Please continue with Google."
-    );
-  }
-
-  if (!(await user.isPasswordCorrect(password))) {
-
   if (!user && phone) {
     const providerProfile = await ProviderProfile.findOne({ phone });
     const customerProfile = providerProfile ? null : await CustomerProfile.findOne({ phone });
@@ -196,7 +159,6 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 
   if (!user || !(await user.isPasswordCorrect(password))) {
-
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid credentials");
   }
 
@@ -227,30 +189,10 @@ const loginUser = asyncHandler(async (req, res) => {
    Logout
 ---------------------------------- */
 const logoutUser = asyncHandler(async (req, res) => {
-
-  const accessToken =
-    req.cookies?.accessToken ||
-    req.header("Authorization")?.replace("Bearer ", "");
-  const incomingRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
-
-  let userId = req.user?._id;
-  if (!userId && accessToken) {
-    try {
-      const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
-      userId = decoded?._id;
-    } catch {
-      userId = null;
-    }
-  }
-
-  if (userId) {
-    await User.findByIdAndUpdate(userId, {
-
   const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
   if (req.user?._id) {
     await User.findByIdAndUpdate(req.user._id, {
-
       $unset: { refreshToken: "" },
     });
   } else if (incomingRefreshToken) {
@@ -338,16 +280,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     user._id
   );
 
-  const options = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-  };
-
   return res
     .status(StatusCodes.OK)
-    .cookie("accessToken", accessToken, options)
-    .cookie("refreshToken", refreshToken, options)
     .json(
       new ApiResponse(
         StatusCodes.OK,
@@ -356,44 +290,5 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       )
     );
 });
-
-
-const completeProviderProfile = asyncHandler(async (req, res) => {
-  const { displayName, phone, businessName, description } = req.body;
-
-  if (!displayName?.trim() || !phone?.trim()) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "Display name and phone are required");
-  }
-
-  if (req.user.role !== "provider") {
-    throw new ApiError(StatusCodes.FORBIDDEN, "Only provider accounts can complete provider profile");
-  }
-
-  const profile = await ProviderProfile.findOneAndUpdate(
-    { userId: req.user._id },
-    {
-      $set: {
-        userId: req.user._id,
-        displayName: displayName.trim(),
-        phone: phone.trim(),
-        businessName: businessName?.trim() || "",
-        description: description?.trim() || "Service provider",
-      },
-      $setOnInsert: {
-        pricing: { starting: 0 },
-      },
-    },
-    {
-      upsert: true,
-      new: true,
-      runValidators: true,
-    }
-  );
-
-  return res
-    .status(StatusCodes.OK)
-    .json(new ApiResponse(StatusCodes.OK, { profile }, "Provider profile completed successfully"));
-});
-
 
 export { loginUser, logoutUser, refreshAccessToken, googleAuth, completeProviderProfile };

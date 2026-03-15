@@ -102,42 +102,6 @@ const registerProvider = asyncHandler(async (req, res) => {
   let user;
   let providerProfile;
 
-
-  try {
-    await session.withTransaction(async () => {
-      user = await User.create(
-        [
-          {
-            userName: userName.toLowerCase(),
-            fullName,
-            email,
-            password,
-            role: "provider",
-          },
-        ],
-        { session }
-      );
-
-      providerProfile = await ProviderProfile.create(
-        [
-          {
-            userId: user[0]._id,
-            businessName,
-            displayName,
-            phone,
-            description: description || "Service provider",
-            pricing: { starting: 0 },
-          },
-        ],
-        { session }
-      );
-    });
-  } finally {
-    await session.endSession();
-  }
-
-  const createdUser = user[0];
-  const createdProviderProfile = providerProfile[0];
   await session.withTransaction(async () => {
     user = await User.create(
       [
@@ -169,13 +133,12 @@ const registerProvider = asyncHandler(async (req, res) => {
 
   await session.endSession();
 
-
-  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(createdUser._id);
+  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
 
   return res.status(StatusCodes.CREATED).json(
     new ApiResponse(
       StatusCodes.CREATED,
-      { user: createdUser, providerProfile: createdProviderProfile, accessToken, refreshToken },
+      { user, providerProfile, accessToken, refreshToken },
       "Provider registered successfully"
     )
   );
