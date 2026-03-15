@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { verifyJWT } from "../MIDDLEWARES/auth.middlewares.js";
 
 import {
     getCustomerProfile,
@@ -10,12 +9,12 @@ import {
 const router = Router();
 
 // Route to get customer profile
-router.route("/getCustomerProfile").get(verifyJWT, getCustomerProfile);
+router.route("/getCustomerProfile").get(getCustomerProfile);
 
 // Route to update customer profile
-router.route("/updateCustomerProfile").put(verifyJWT, updateCustomerProfile);
+router.route("/updateCustomerProfile").put(updateCustomerProfile);
 
 // Route to delete customer profile
-router.route("/deleteCustomerProfile").delete(verifyJWT, deleteCustomerProfile);
+router.route("/deleteCustomerProfile").delete(deleteCustomerProfile);
 
 export default router;

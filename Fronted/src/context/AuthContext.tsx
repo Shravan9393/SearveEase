@@ -5,15 +5,6 @@ interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-
-    login: (email: string, password: string) => Promise<void>;
-    googleLogin: (googleToken: string, role?: 'customer' | 'provider') => Promise<User>;
-    completeProviderProfile: (data: {
-        displayName: string;
-        phone: string;
-        businessName?: string;
-        description?: string;
-
     login: (identifier: string, password: string) => Promise<void>;
     googleLogin: (googleToken: string, role?: 'customer' | 'provider') => Promise<AuthResult>;
     completeProviderProfile: (data: {
@@ -21,7 +12,6 @@ interface AuthContextType {
         phone: string;
         businessName: string;
         description: string;
-
     }) => Promise<void>;
     registerCustomer: (data: {
         userName: string;
@@ -106,34 +96,21 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactEl
         await refreshUser();
     };
 
-
-    const googleLogin = async (googleToken: string, role?: 'customer' | 'provider'): Promise<User> => {
-
     const googleLogin = async (googleToken: string, role: 'customer' | 'provider' = 'customer'): Promise<AuthResult> => {
-
         const response = await authAPI.googleLogin(googleToken, role);
 
         setTokens(response.accessToken, response.refreshToken);
         setUser(response.user);
         setUserState(response.user);
         await refreshUser();
-
-        return response.user;
-
         return { requiresProviderProfileCompletion: response.requiresProviderProfileCompletion };
-
     };
 
     const completeProviderProfile = async (data: {
         displayName: string;
         phone: string;
-
-        businessName?: string;
-        description?: string;
-
         businessName: string;
         description: string;
-
     }) => {
         await authAPI.completeProviderProfile(data);
         await refreshUser();
@@ -202,7 +179,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactEl
                 registerProvider,
                 logout,
                 refreshUser,
-                completeProviderProfile,
             }}
         >
             {children}

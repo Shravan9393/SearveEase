@@ -134,6 +134,5 @@ const providerProfileSchema = new mongoose.Schema(
 
 export const ProviderProfile = mongoose.model(
   "ProviderProfile",
-  providerProfileSchema,
-  "providerprofiles"
+  providerProfileSchema
 );
