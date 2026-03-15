@@ -17,6 +17,15 @@ api.interceptors.request.use(
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+
+        if (config.url?.includes('/auth/login')) {
+            const data = (config.data ?? {}) as { identifier?: string; password?: string };
+            console.log('[api] outbound /auth/login payload', {
+                identifier: data.identifier,
+                passwordLength: data.password?.length ?? 0,
+            });
+        }
+
         return config;
     },
     (error: AxiosError) => {

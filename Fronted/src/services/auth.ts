@@ -79,6 +79,10 @@ export const authAPI = {
     },
 
     login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
+        console.log('[authAPI] login request payload', {
+            identifier: credentials.identifier,
+            passwordLength: credentials.password?.length ?? 0,
+        });
         const response = await api.post('/auth/login', credentials);
         return response.data.data;
     },

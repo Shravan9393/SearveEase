@@ -88,7 +88,12 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactEl
     }, []);
 
     const login = async (identifier: string, password: string) => {
-        const response = await authAPI.login({ identifier, password });
+        const normalizedIdentifier = identifier.trim();
+        console.log('[AuthContext] login called', {
+            identifier: normalizedIdentifier,
+            passwordLength: password.length,
+        });
+        const response = await authAPI.login({ identifier: normalizedIdentifier, password });
 
         setTokens(response.accessToken, response.refreshToken);
         setUser(response.user);
