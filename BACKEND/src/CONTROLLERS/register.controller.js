@@ -6,6 +6,7 @@ import { ApiError } from "../UTILS/apiError.js";
 import { ApiResponse } from "../UTILS/apiResponse.js";
 import { StatusCodes } from "http-status-codes";
 import mongoose from "mongoose";
+import { uploadOnCloudinary } from "../UTILS/cloudinary.js";
 
 /* ----------------------------------
    Token Generator
@@ -49,18 +50,22 @@ const registerCustomer = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.CONFLICT, "User already exists");
   }
 
+  const uploadedImage = req.file ? await uploadOnCloudinary(req.file.path) : null;
+
   const user = await User.create({
     userName: userName.toLowerCase(),
     fullName,
     email,
     password,
     role: "customer",
+    profileImage: uploadedImage?.secure_url,
   });
 
   const customerProfile = await CustomerProfile.create({
     userId: user._id,
     fullName,
     phone,
+    profileImage: uploadedImage?.secure_url,
   });
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
@@ -98,6 +103,8 @@ const registerProvider = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.CONFLICT, "User already exists");
   }
 
+  const uploadedImage = req.file ? await uploadOnCloudinary(req.file.path) : null;
+
   const session = await mongoose.startSession();
   let user;
   let providerProfile;
@@ -111,6 +118,7 @@ const registerProvider = asyncHandler(async (req, res) => {
           email,
           password,
           role: "provider",
+          profileImage: uploadedImage?.secure_url,
         },
       ],
       { session }
@@ -125,6 +133,7 @@ const registerProvider = asyncHandler(async (req, res) => {
           phone,
           description: description || "Service provider",
           pricing: { starting: 0 },
+          profileImage: uploadedImage?.secure_url,
         },
       ],
       { session }

@@ -54,6 +54,7 @@ export interface RegisterCustomerData {
     password: string;
     fullName: string;
     phone: string;
+    profileImage?: File | null;
 }
 
 export interface RegisterProviderData {
@@ -65,17 +66,38 @@ export interface RegisterProviderData {
     displayName: string;
     businessName: string;
     description: string;
+    profileImage?: File | null;
 }
+
+
+const toRegisterFormData = (data: RegisterCustomerData | RegisterProviderData): FormData => {
+    const formData = new FormData();
+
+    Object.entries(data).forEach(([key, value]) => {
+        if (value === undefined || value === null) {
+            return;
+        }
+
+        if (key === 'profileImage' && value instanceof File) {
+            formData.append(key, value);
+            return;
+        }
+
+        formData.append(key, String(value));
+    });
+
+    return formData;
+};
 
 // Auth API functions
 export const authAPI = {
     registerCustomer: async (data: RegisterCustomerData): Promise<AuthResponse> => {
-        const response = await api.post('/auth/register/customer', data);
+        const response = await api.post('/auth/register/customer', toRegisterFormData(data));
         return response.data.data;
     },
 
     registerProvider: async (data: RegisterProviderData): Promise<AuthResponse> => {
-        const response = await api.post('/auth/register/provider', data);
+        const response = await api.post('/auth/register/provider', toRegisterFormData(data));
         return response.data.data;
     },
 

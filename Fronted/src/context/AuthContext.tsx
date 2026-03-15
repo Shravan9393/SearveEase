@@ -19,6 +19,7 @@ interface AuthContextType {
         password: string;
         fullName: string;
         phone: string;
+        profileImage?: File | null;
     }) => Promise<void>;
     registerProvider: (data: {
         userName: string;
@@ -29,6 +30,7 @@ interface AuthContextType {
         displayName: string;
         businessName: string;
         description: string;
+        profileImage?: File | null;
     }) => Promise<void>;
     logout: () => void;
     refreshUser: () => Promise<void>;
@@ -128,6 +130,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactEl
         password: string;
         fullName: string;
         phone: string;
+        profileImage?: File | null;
     }) => {
         const response = await authAPI.registerCustomer(data);
 
@@ -146,6 +149,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactEl
         displayName: string;
         businessName: string;
         description: string;
+        profileImage?: File | null;
     }) => {
         const response = await authAPI.registerProvider(data);
 
