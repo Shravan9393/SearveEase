@@ -63,6 +63,13 @@ const googleAuth = asyncHandler(async (req, res) => {
 
   let isFirstGoogleLogin = false;
   if (user) {
+    if (user.role !== requestedRole) {
+      throw new ApiError(
+        StatusCodes.CONFLICT,
+        `This account is registered as a ${user.role}.`
+      );
+    }
+
     // Update Google ID if not set
     if (!user.googleId) {
       user.googleId = googleId;
@@ -81,17 +88,12 @@ const googleAuth = asyncHandler(async (req, res) => {
       fullName: name || email.split('@')[0],
       email,
       password: Math.random().toString(36).slice(-8), // Random password for Google accounts
-      role: "customer",
+      role: requestedRole,
       googleId,
       isGoogleAccount: true,
       profileImage: picture || "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg",
     });
     isFirstGoogleLogin = true;
-  }
-
-  if (requestedRole === "provider" && user.role !== "provider") {
-    user.role = "provider";
-    await user.save();
   }
 
   const providerProfile = user.role === "provider" ? await ProviderProfile.findOne({ userId: user._id }) : null;
@@ -138,6 +140,9 @@ const loginUser = asyncHandler(async (req, res) => {
   const identifier = normalizeString(req.body.identifier).toLowerCase();
   const phone = normalizeString(req.body.phone);
   const password = normalizeString(req.body.password);
+  const requestedRole = ["customer", "provider"].includes(req.body.role)
+    ? req.body.role
+    : null;
 
   const loginIdentifier = identifier || email || userName || phone;
 
@@ -160,6 +165,13 @@ const loginUser = asyncHandler(async (req, res) => {
 
   if (!user || !(await user.isPasswordCorrect(password))) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid credentials");
+  }
+
+  if (requestedRole && user.role !== requestedRole) {
+    throw new ApiError(
+      StatusCodes.CONFLICT,
+      `This account is registered as a ${user.role}.`
+    );
   }
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
@@ -231,8 +243,10 @@ const completeProviderProfile = asyncHandler(async (req, res) => {
   }
 
   if (user.role !== "provider") {
-    user.role = "provider";
-    await user.save({ validateBeforeSave: false });
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      "Only provider accounts can complete provider profiles"
+    );
   }
 
   const profile = await ProviderProfile.findOneAndUpdate(
