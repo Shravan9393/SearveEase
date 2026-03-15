@@ -225,24 +225,34 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
         })
         await login(identifier, credentialsData.password, userType)
       } else if (userType === 'customer') {
-        await registerCustomer({
-          userName: credentialsData.email.split('@')[0] || credentialsData.name.replace(/\s+/g, '').toLowerCase(),
-          email: credentialsData.email,
-          password: credentialsData.password,
-          fullName: credentialsData.name,
-          phone: credentialsData.phone || '9999999999',
-        })
+        const formData = new FormData()
+        formData.append('userName', credentialsData.email.split('@')[0] || credentialsData.name.replace(/\s+/g, '').toLowerCase())
+        formData.append('email', credentialsData.email)
+        formData.append('password', credentialsData.password)
+        formData.append('fullName', credentialsData.name)
+        formData.append('phone', credentialsData.phone || '9999999999')
+
+        if (customerProfileData.profileImage) {
+          formData.append('profileImage', customerProfileData.profileImage)
+        }
+
+        await registerCustomer(formData)
       } else {
-        await registerProvider({
-          userName: credentialsData.email.split('@')[0] || credentialsData.name.replace(/\s+/g, '').toLowerCase(),
-          email: credentialsData.email,
-          password: credentialsData.password,
-          fullName: credentialsData.name,
-          phone: credentialsData.phone || '9999999999',
-          displayName: credentialsData.name,
-          businessName: providerData.businessName,
-          description: providerData.description || 'Service provider',
-        })
+        const formData = new FormData()
+        formData.append('userName', credentialsData.email.split('@')[0] || credentialsData.name.replace(/\s+/g, '').toLowerCase())
+        formData.append('email', credentialsData.email)
+        formData.append('password', credentialsData.password)
+        formData.append('fullName', credentialsData.name)
+        formData.append('phone', credentialsData.phone || '9999999999')
+        formData.append('displayName', credentialsData.name)
+        formData.append('businessName', providerData.businessName)
+        formData.append('description', providerData.description || 'Service provider')
+
+        if (providerData.profileImage) {
+          formData.append('profileImage', providerData.profileImage)
+        }
+
+        await registerProvider(formData)
       }
 
       onAuthComplete({
@@ -256,7 +266,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
     } finally {
       setIsLoading(false)
     }
-  }, [isCompletingGoogleProviderProfile, authMode, credentialsData, userType, providerData, completeProviderProfile, login, registerCustomer, registerProvider, onAuthComplete, onClose])
+  }, [isCompletingGoogleProviderProfile, authMode, credentialsData, userType, customerProfileData.profileImage, providerData, completeProviderProfile, login, registerCustomer, registerProvider, onAuthComplete, onClose])
 
   const handleSocialLogin = useCallback(async (provider: 'google') => {
     if (provider !== 'google') return

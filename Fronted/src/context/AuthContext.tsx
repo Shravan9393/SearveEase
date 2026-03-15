@@ -13,23 +13,8 @@ interface AuthContextType {
         businessName: string;
         description: string;
     }) => Promise<void>;
-    registerCustomer: (data: {
-        userName: string;
-        email: string;
-        password: string;
-        fullName: string;
-        phone: string;
-    }) => Promise<void>;
-    registerProvider: (data: {
-        userName: string;
-        email: string;
-        password: string;
-        fullName: string;
-        phone: string;
-        displayName: string;
-        businessName: string;
-        description: string;
-    }) => Promise<void>;
+    registerCustomer: (data: FormData) => Promise<void>;
+    registerProvider: (data: FormData) => Promise<void>;
     logout: () => void;
     refreshUser: () => Promise<void>;
 }
@@ -122,13 +107,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactEl
         await refreshUser();
     };
 
-    const registerCustomer = async (data: {
-        userName: string;
-        email: string;
-        password: string;
-        fullName: string;
-        phone: string;
-    }) => {
+    const registerCustomer = async (data: FormData) => {
         const response = await authAPI.registerCustomer(data);
 
         setTokens(response.accessToken, response.refreshToken);
@@ -137,16 +116,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactEl
         await refreshUser();
     };
 
-    const registerProvider = async (data: {
-        userName: string;
-        email: string;
-        password: string;
-        fullName: string;
-        phone: string;
-        displayName: string;
-        businessName: string;
-        description: string;
-    }) => {
+    const registerProvider = async (data: FormData) => {
         const response = await authAPI.registerProvider(data);
 
         setTokens(response.accessToken, response.refreshToken);

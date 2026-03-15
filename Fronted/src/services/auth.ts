@@ -69,13 +69,17 @@ export interface RegisterProviderData {
 
 // Auth API functions
 export const authAPI = {
-    registerCustomer: async (data: RegisterCustomerData): Promise<AuthResponse> => {
-        const response = await api.post('/auth/register/customer', data);
+    registerCustomer: async (data: RegisterCustomerData | FormData): Promise<AuthResponse> => {
+        const response = await api.post('/auth/register/customer', data, {
+            headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+        });
         return response.data.data;
     },
 
-    registerProvider: async (data: RegisterProviderData): Promise<AuthResponse> => {
-        const response = await api.post('/auth/register/provider', data);
+    registerProvider: async (data: RegisterProviderData | FormData): Promise<AuthResponse> => {
+        const response = await api.post('/auth/register/provider', data, {
+            headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+        });
         return response.data.data;
     },
 
