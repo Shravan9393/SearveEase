@@ -6,6 +6,7 @@ import { ApiError } from "../UTILS/apiError.js";
 import { ApiResponse } from "../UTILS/apiResponse.js";
 import { StatusCodes } from "http-status-codes";
 import mongoose from "mongoose";
+import { uploadOnCloudinary } from "../UTILS/cloudinary.js";
 
 /* ----------------------------------
    Token Generator
@@ -49,18 +50,23 @@ const registerCustomer = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.CONFLICT, "User already exists");
   }
 
+  const uploadedImage = req.file ? await uploadOnCloudinary(req.file.path) : null;
+  const profileImageUrl = uploadedImage?.secure_url;
+
   const user = await User.create({
     userName: userName.toLowerCase(),
     fullName,
     email,
     password,
     role: "customer",
+    ...(profileImageUrl ? { profileImage: profileImageUrl } : {}),
   });
 
   const customerProfile = await CustomerProfile.create({
     userId: user._id,
     fullName,
     phone,
+    ...(profileImageUrl ? { profileImage: profileImageUrl } : {}),
   });
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
@@ -98,6 +104,9 @@ const registerProvider = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.CONFLICT, "User already exists");
   }
 
+  const uploadedImage = req.file ? await uploadOnCloudinary(req.file.path) : null;
+  const profileImageUrl = uploadedImage?.secure_url;
+
   const session = await mongoose.startSession();
   let user;
   let providerProfile;
@@ -111,6 +120,7 @@ const registerProvider = asyncHandler(async (req, res) => {
           email,
           password,
           role: "provider",
+          ...(profileImageUrl ? { profileImage: profileImageUrl } : {}),
         },
       ],
       { session }
@@ -124,6 +134,7 @@ const registerProvider = asyncHandler(async (req, res) => {
           displayName,
           phone,
           description: description || "Service provider",
+          ...(profileImageUrl ? { profileImage: profileImageUrl } : {}),
           pricing: { starting: 0 },
         },
       ],
