@@ -4,7 +4,7 @@ import {
   registerCustomer,
   registerProvider,
 } from "../CONTROLLERS/register.controller.js";
-
+import { upload } from "../MIDDLEWARES/multer.middleware.js";
 
 const router = Router();
 
@@ -13,9 +13,9 @@ const router = Router();
 
 // for the customer registeration
 
-router.route("/customer").post(registerCustomer);
+router.route("/customer").post(upload.single("profileImage"), registerCustomer);
 
 // for the provider registeration
-router.route("/provider").post(registerProvider);
+router.route("/provider").post(upload.single("profileImage"), registerProvider);
 
 export default router;
