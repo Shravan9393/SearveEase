@@ -187,7 +187,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
         handleSubmit()
         break
     }
-  }, [currentStep, userType, authMode, loginMethod, credentialsData, customerProfileData, providerData, handleSubmit])
+  }, [currentStep, userType, authMode, loginMethod, credentialsData, customerProfileData, providerData])
 
   const handleBack = useCallback(() => {
     switch (currentStep) {
