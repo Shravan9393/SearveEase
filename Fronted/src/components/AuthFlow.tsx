@@ -163,17 +163,31 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
             setCurrentStep('providerDetails')
           }
         } else {
+          console.log('[AuthFlow] Submitting signin from credentials step', {
+            loginMethod,
+            email: credentialsData.email,
+            phone: credentialsData.phone,
+            passwordLength: credentialsData.password.length,
+          })
           handleSubmit()
         }
         break
       case 'profileSetup':
+        console.log('[AuthFlow] Submitting customer profile setup', {
+          location: customerProfileData.location,
+          preferredServicesCount: customerProfileData.preferredServices.length,
+        })
         handleSubmit()
         break
       case 'providerDetails':
+        console.log('[AuthFlow] Submitting provider details', {
+          businessName: providerData.businessName,
+          serviceCategory: providerData.serviceCategory,
+        })
         handleSubmit()
         break
     }
-  }, [currentStep, userType, authMode])
+  }, [currentStep, userType, authMode, loginMethod, credentialsData, customerProfileData, providerData, handleSubmit])
 
   const handleBack = useCallback(() => {
     switch (currentStep) {
@@ -203,7 +217,13 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
           description: providerData.description || 'Service provider',
         })
       } else if (authMode === 'signin') {
-        await login(loginMethod === 'email' ? credentialsData.email : credentialsData.phone, credentialsData.password)
+        const identifier = (loginMethod === 'email' ? credentialsData.email : credentialsData.phone).trim()
+        console.log('[AuthFlow] handleSubmit signin payload', {
+          loginMethod,
+          identifier,
+          passwordLength: credentialsData.password.length,
+        })
+        await login(identifier, credentialsData.password)
       } else if (userType === 'customer') {
         await registerCustomer({
           userName: credentialsData.email.split('@')[0] || credentialsData.name.replace(/\s+/g, '').toLowerCase(),
