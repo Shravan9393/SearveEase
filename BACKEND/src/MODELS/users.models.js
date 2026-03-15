@@ -79,13 +79,35 @@ const userSchema = new mongoose.Schema(
   { timestamps: true, collection: "users" }
 );
 
+const ROLE_IMMUTABLE_ERROR = "User role cannot be changed after registration";
+
 
 // using  Pre-save middleware to hash password
 userSchema.pre("save", async function (next) {
+  if (!this.isNew && this.isModified("role")) {
+    return next(new Error(ROLE_IMMUTABLE_ERROR));
+  }
+
   if (!this.isModified("password")) return next(); // only hash if modified
   this.password = await bcrypt.hash(this.password, 10);
   next();
 });
+
+const blockRoleMutationInUpdate = function (next) {
+  const update = this.getUpdate() || {};
+  const directRole = update.role;
+  const setRole = update.$set?.role;
+
+  if (directRole !== undefined || setRole !== undefined) {
+    return next(new Error(ROLE_IMMUTABLE_ERROR));
+  }
+
+  next();
+};
+
+userSchema.pre("findOneAndUpdate", blockRoleMutationInUpdate);
+userSchema.pre("updateOne", blockRoleMutationInUpdate);
+userSchema.pre("updateMany", blockRoleMutationInUpdate);
 
 
 //  comparing passwords during login

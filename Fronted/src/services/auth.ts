@@ -45,6 +45,7 @@ export interface LoginCredentials {
     userName?: string;
     identifier?: string;
     password: string;
+    role?: 'customer' | 'provider';
 }
 
 export interface RegisterCustomerData {

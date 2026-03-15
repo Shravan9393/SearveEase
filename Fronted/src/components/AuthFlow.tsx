@@ -223,7 +223,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
           identifier,
           passwordLength: credentialsData.password.length,
         })
-        await login(identifier, credentialsData.password)
+        await login(identifier, credentialsData.password, userType)
       } else if (userType === 'customer') {
         await registerCustomer({
           userName: credentialsData.email.split('@')[0] || credentialsData.name.replace(/\s+/g, '').toLowerCase(),

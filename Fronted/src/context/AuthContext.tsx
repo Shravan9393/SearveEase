@@ -5,7 +5,7 @@ interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (identifier: string, password: string) => Promise<void>;
+    login: (identifier: string, password: string, role?: 'customer' | 'provider') => Promise<void>;
     googleLogin: (googleToken: string, role?: 'customer' | 'provider') => Promise<AuthResult>;
     completeProviderProfile: (data: {
         displayName: string;
@@ -87,13 +87,14 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }): ReactEl
         bootstrapAuth();
     }, []);
 
-    const login = async (identifier: string, password: string) => {
+    const login = async (identifier: string, password: string, role?: 'customer' | 'provider') => {
         const normalizedIdentifier = identifier.trim();
         console.log('[AuthContext] login called', {
             identifier: normalizedIdentifier,
             passwordLength: password.length,
+            role: role ?? 'not_provided',
         });
-        const response = await authAPI.login({ identifier: normalizedIdentifier, password });
+        const response = await authAPI.login({ identifier: normalizedIdentifier, password, role });
 
         setTokens(response.accessToken, response.refreshToken);
         setUser(response.user);
