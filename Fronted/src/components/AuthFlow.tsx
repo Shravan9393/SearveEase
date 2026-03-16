@@ -184,6 +184,13 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ isOpen, onClose, onAuthComplete }) 
           displayName: credentialsData.name,
           businessName: providerData.businessName,
           description: providerData.description || 'Service provider',
+          serviceCategory: providerData.serviceCategory,
+          experience: providerData.experience,
+          location: providerData.location,
+          serviceArea: providerData.serviceArea,
+          pricing: providerData.pricing,
+          availability: providerData.availability,
+          certifications: providerData.certifications,
           profileImage: providerData.profileImage,           // ✅ always fresh via ref
         })
       }

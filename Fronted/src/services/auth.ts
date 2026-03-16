@@ -66,6 +66,13 @@ export interface RegisterProviderData {
     displayName: string;
     businessName: string;
     description: string;
+    serviceCategory?: string;
+    experience?: string;
+    location?: string;
+    serviceArea?: string;
+    pricing?: string;
+    availability?: string;
+    certifications?: string;
     profileImage?: File | null;
 }
 
@@ -97,6 +104,13 @@ export const authAPI = {
         formData.append('displayName', data.displayName);
         formData.append('businessName', data.businessName);
         formData.append('description', data.description);
+        if (data.serviceCategory) formData.append('serviceCategory', data.serviceCategory);
+        if (data.experience) formData.append('experience', data.experience);
+        if (data.location) formData.append('location', data.location);
+        if (data.serviceArea) formData.append('serviceArea', data.serviceArea);
+        if (data.pricing) formData.append('pricing', data.pricing);
+        if (data.availability) formData.append('availability', data.availability);
+        if (data.certifications) formData.append('certifications', data.certifications);
         if (data.profileImage) {
             formData.append('profileImage', data.profileImage);
         }
