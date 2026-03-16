@@ -1,55 +1,50 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
 
+
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// upload image to cloudinary
-
 const uploadOnCloudinary = async (localFilePath) => {
   try {
-    if (!localFilePath) {
-      return null;
-    }
-
-    // now uplaod the file on the cloudinary
+    if (!localFilePath) return null;
 
     const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "auto",
     });
 
-    // now file has been uploaded on cloudinary successfully
+    console.log("[cloudinary] Upload successful:", response.secure_url);
 
-    console.log("file is uploaded on cloudinary successfully : ", response);
-
-    // now we will delete the file from the local server
+    // Clean up local temp file after successful upload
     fs.unlinkSync(localFilePath);
-
     return response;
   } catch (error) {
-    // if the error catches , then remove the file from local as the file upload Failed
-    fs.unlinkSync(localFilePath);
+    console.error("[cloudinary] Upload failed:", error.message);
+
+    // Clean up temp file even on failure
+    if (fs.existsSync(localFilePath)) {
+      fs.unlinkSync(localFilePath);
+    }
     return null;
   }
 };
 
-// delete on cloudinary
-
-const deleteOnCloudinary = async (public_id, resource_type = "auto") => {
+const deleteOnCloudinary = async (public_id, resource_type = "image") => {
   try {
-    if (!public_id) {
-      return null;
-    }
+    if (!public_id) return null;
 
-    const response = await cloudinary.uploader.destroy(public_id, {
-      resource_type: `${resource_type}`,
+    const result = await cloudinary.uploader.destroy(public_id, {
+      resource_type,
     });
+
+    return result;
   } catch (error) {
-    return error;
-    console.error("error while deleting the file on cloudinary : ", error);
+    console.error("[cloudinary] Deletion failed:", error.message);
+    return null;
   }
 };
 
