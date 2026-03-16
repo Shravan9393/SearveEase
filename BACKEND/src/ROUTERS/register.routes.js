@@ -1,5 +1,4 @@
 import { Router } from "express";
-
 import {
   registerCustomer,
   registerProvider,
@@ -8,14 +7,39 @@ import { upload } from "../MIDDLEWARES/multer.middleware.js";
 
 const router = Router();
 
-// Route to handle the user registeration
 
+const handleUpload = (req, res, next) => {
+  upload.single("profileImage")(req, res, (err) => {
+    if (err) {
+      console.error("[multer] Upload error:", err.message);
+      return res.status(400).json({
+        success: false,
+        message: err.message || "File upload failed.",
+      });
+    }
 
-// for the customer registeration
+    // Log outcome so you can confirm in terminal whether file arrived
+    if (req.file) {
+      console.log(
+        "[multer] File received:",
+        req.file.originalname,
+        "→",
+        req.file.path
+      );
+    } else {
+      console.warn(
+        "[multer] No file in request (profileImage field was empty or not sent)."
+      );
+    }
 
-router.route("/customer").post(upload.single("profileImage"), registerCustomer);
+    next();
+  });
+};
 
-// for the provider registeration
-router.route("/provider").post(upload.single("profileImage"), registerProvider);
+// Customer registration
+router.route("/customer").post(handleUpload, registerCustomer);
+
+// Provider registration
+router.route("/provider").post(handleUpload, registerProvider);
 
 export default router;
