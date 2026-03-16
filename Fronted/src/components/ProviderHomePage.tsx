@@ -27,6 +27,7 @@ import { ViewAllQueriesModal } from "./ViewAllQueriesModal"
 import { CustomerReviewsModal } from "./CustomerReviewsModal"
 import { ManageServicesModal } from "./ManageServicesModal"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts"
+import { providerAPI, ProviderDashboardData } from "../services/provider"
 
 interface ProviderHomePageProps {
   user: any
@@ -43,46 +44,40 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
   const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false)
   const [isManageServicesModalOpen, setIsManageServicesModalOpen] = useState(false)
 
-  // Mock service queries notifications
+  const [dashboardData, setDashboardData] = useState<ProviderDashboardData | null>(null)
+  const [isLoadingDashboard, setIsLoadingDashboard] = useState(true)
+
   useEffect(() => {
-    const mockNotifications = [
-      {
-        id: "1",
-        customerName: "Rahul Sharma",
-        customerAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-        service: "AC Repair",
-        location: "Koramangala, Bangalore",
-        budget: "₹500-800",
-        time: "2 min ago",
-        message: "Need urgent AC repair. Not cooling properly.",
-        status: 'pending' as const
-      },
-      {
-        id: "2",
-        customerName: "Priya Mehta",
-        customerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
-        service: "Electrical Work",
-        location: "Indiranagar, Bangalore",
-        budget: "₹300-500",
-        time: "5 min ago",
-        message: "Light fixtures installation needed in 2 rooms.",
-        status: 'pending' as const
-      },
-      {
-        id: "3",
-        customerName: "Amit Kumar",
-        customerAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
-        service: "Plumbing",
-        location: "HSR Layout, Bangalore",
-        budget: "₹400-600",
-        time: "12 min ago",
-        message: "Kitchen sink is leaking. Need immediate fix.",
-        status: 'pending' as const
+    const loadDashboard = async () => {
+      try {
+        setIsLoadingDashboard(true)
+        const data = await providerAPI.getProviderDashboard()
+        setDashboardData(data)
+
+        const pendingNotifications = data.activityData
+          .map((entry, index) => ({
+            id: `${index + 1}`,
+            customerName: "New Customer",
+            customerAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
+            service: data.provider.category || "Service Request",
+            location: user.location?.city ? `${user.location.city}, ${user.location?.state || ""}` : "Your service area",
+            budget: "Check booking details",
+            time: `${entry.day}`,
+            message: `You received ${entry.queries} new queries`,
+            status: 'pending' as const
+          }))
+          .filter((entry) => Number(entry.message.match(/\d+/)?.[0] || 0) > 0)
+
+        setNotifications(pendingNotifications)
+      } catch (error) {
+        console.error("Failed to load provider dashboard", error)
+      } finally {
+        setIsLoadingDashboard(false)
       }
-    ]
-    
-    setNotifications(mockNotifications)
-  }, [])
+    }
+
+    loadDashboard()
+  }, [user.location?.city, user.location?.state])
 
   const handleAcceptNotification = (id: string) => {
     setNotifications(prev => prev.map(n => 
@@ -105,86 +100,24 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
     setIsQueryModalOpen(true)
   }
 
-  // Mock statistics
-  const stats = {
-    totalRevenue: 45680,
-    revenueGrowth: 12.5,
-    profileViews: 1234,
-    viewsGrowth: 8.3,
-    completedServices: 87,
-    servicesGrowth: 15.2,
-    activeBookings: 12,
-    rating: 4.8,
-    responseRate: 95,
-    completionRate: 98
+  const stats = dashboardData?.stats || {
+    totalRevenue: 0,
+    revenueGrowth: 0,
+    profileViews: 0,
+    viewsGrowth: 0,
+    completedServices: 0,
+    servicesGrowth: 0,
+    activeBookings: 0,
+    pendingBookings: 0,
+    rating: 0,
+    responseRate: 0,
+    completionRate: 0,
   }
 
-  // Revenue data for chart
-  const revenueData = [
-    { month: "Jan", revenue: 28000, bookings: 45 },
-    { month: "Feb", revenue: 32000, bookings: 52 },
-    { month: "Mar", revenue: 35000, bookings: 58 },
-    { month: "Apr", revenue: 38000, bookings: 61 },
-    { month: "May", revenue: 42000, bookings: 69 },
-    { month: "Jun", revenue: 45680, bookings: 74 }
-  ]
-
-  // Daily activity data
-  const activityData = [
-    { day: "Mon", queries: 12, bookings: 5 },
-    { day: "Tue", queries: 15, bookings: 7 },
-    { day: "Wed", queries: 8, bookings: 4 },
-    { day: "Thu", queries: 18, bookings: 9 },
-    { day: "Fri", queries: 14, bookings: 6 },
-    { day: "Sat", queries: 22, bookings: 11 },
-    { day: "Sun", queries: 10, bookings: 4 }
-  ]
-
-  // Active listings
-  const listings = [
-    {
-      id: "1",
-      service: user.serviceCategory || "AC Repair & Maintenance",
-      price: "₹500-1500",
-      bookings: 24,
-      revenue: "₹18,400",
-      status: "active",
-      views: 245,
-      rating: 4.9
-    },
-    {
-      id: "2",
-      service: "Emergency Repair Service",
-      price: "₹800-2000",
-      bookings: 15,
-      revenue: "₹12,200",
-      status: "active",
-      views: 178,
-      rating: 4.7
-    },
-    {
-      id: "3",
-      service: "Regular Maintenance",
-      price: "₹300-800",
-      bookings: 48,
-      revenue: "₹15,080",
-      status: "active",
-      views: 312,
-      rating: 4.8
-    }
-  ]
-
-  // Competitor pricing insights
-  const competitorData = [
-    {
-      category: user.serviceCategory || "AC Repair & Maintenance",
-      yourPrice: "₹500-1500",
-      avgMarketPrice: "₹600-1600",
-      lowestPrice: "₹400-1200",
-      highestPrice: "₹800-2000",
-      marketPosition: "Competitive"
-    }
-  ]
+  const revenueData = dashboardData?.revenueData || []
+  const activityData = dashboardData?.activityData || []
+  const listings = dashboardData?.services || []
+  const competitorData = dashboardData?.priceComparison || []
 
   return (
     <div className="min-h-screen pt-20 pb-32 px-4 md:px-8">
@@ -202,6 +135,10 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
         transition={{ duration: 0.3 }}
         className="max-w-7xl mx-auto space-y-6"
       >
+        {isLoadingDashboard && (
+          <div className="text-sm text-muted-foreground">Loading dashboard data...</div>
+        )}
+
         {/* Welcome Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -216,7 +153,7 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
               {/* Profile Picture */}
               <div className="relative">
                 <img 
-                  src={user.profilePhoto || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face"} 
+                  src={dashboardData?.provider?.profileImage || user.profilePhoto || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face"} 
                   alt={user.name}
                   className="w-16 h-16 rounded-full object-cover border-2 border-primary/50"
                   style={{
@@ -227,7 +164,7 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
               </div>
               <div>
                 <h1 className="text-2xl text-foreground mb-1">
-                  Welcome back, {user.name}! 👋
+                  Welcome back, {dashboardData?.provider?.displayName || user.name}! 👋
                 </h1>
                 <p className="text-muted-foreground">
                   Here's what's happening with your services today
@@ -372,6 +309,7 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
               </div>
               <p className="text-2xl text-foreground mb-1">{stats.activeBookings}</p>
               <p className="text-xs text-muted-foreground">Active Bookings</p>
+              <p className="text-[10px] text-orange-500 mt-1">Pending: {stats.pendingBookings}</p>
             </div>
           </motion.div>
         </div>
