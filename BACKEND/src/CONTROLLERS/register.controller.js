@@ -1,6 +1,8 @@
 import { User } from "../MODELS/users.models.js";
 import { CustomerProfile } from "../MODELS/customer_profiles.models.js";
 import { ProviderProfile } from "../MODELS/provider_profiles.models.js";
+import Service from "../MODELS/services.models.js";
+import Category from "../MODELS/categories.models.js";
 import { asyncHandler } from "../UTILS/asyncHandler.js";
 import { ApiError } from "../UTILS/apiError.js";
 import { ApiResponse } from "../UTILS/apiResponse.js";
@@ -29,6 +31,28 @@ const generateAccessAndRefreshToken = async (userId) => {
 
 const normalizeString = (value) =>
   typeof value === "string" ? value.trim() : "";
+
+const buildSlug = (value) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
+const extractFirstNumber = (value) => {
+  if (typeof value === "number" && !Number.isNaN(value)) return value;
+  if (typeof value !== "string") return 0;
+  const match = value.replace(/,/g, "").match(/\d+(?:\.\d+)?/);
+  return match ? Number(match[0]) : 0;
+};
+
+const mapAvailabilityToServiceAvailability = (value) => {
+  const normalized = normalizeString(value).toLowerCase();
+  if (["available", "busy", "unavailable"].includes(normalized)) {
+    return normalized;
+  }
+  return "available";
+};
 
 /* ----------------------------------
    Register Customer
@@ -112,6 +136,13 @@ const registerProvider = asyncHandler(async (req, res) => {
   const displayName = normalizeString(req.body.displayName);
   const businessName = normalizeString(req.body.businessName);
   const description = normalizeString(req.body.description);
+  const serviceCategory = normalizeString(req.body.serviceCategory);
+  const experience = normalizeString(req.body.experience);
+  const location = normalizeString(req.body.location);
+  const serviceArea = normalizeString(req.body.serviceArea);
+  const pricingInput = normalizeString(req.body.pricing);
+  const availabilityInput = normalizeString(req.body.availability);
+  const certificationsInput = normalizeString(req.body.certifications);
 
   if (
     [userName, email, password, fullName, phone, displayName].some((v) => !v)
@@ -144,6 +175,7 @@ const registerProvider = asyncHandler(async (req, res) => {
   const session = await mongoose.startSession();
   let user;
   let providerProfile;
+  let service;
 
   try {
     await session.withTransaction(async () => {
@@ -175,6 +207,67 @@ const registerProvider = asyncHandler(async (req, res) => {
         ],
         { session }
       ).then((docs) => docs[0]);
+
+      const resolvedCategoryName = serviceCategory || "Other Services";
+      const resolvedCategorySlug = buildSlug(resolvedCategoryName);
+
+      let category = await Category.findOne({ slug: resolvedCategorySlug }).session(
+        session
+      );
+
+      if (!category) {
+        category = await Category.create(
+          [
+            {
+              name: resolvedCategoryName,
+              slug: resolvedCategorySlug,
+              description: `${resolvedCategoryName} services`,
+              isActive: true,
+            },
+          ],
+          { session }
+        ).then((docs) => docs[0]);
+      }
+
+      const parsedPricing = extractFirstNumber(pricingInput);
+      const normalizedDescription =
+        description.length >= 10
+          ? description
+          : `${description || "Service provider"} offerings and support`;
+      const locationPolicy =
+        (serviceArea && `Provider serves ${serviceArea}`) ||
+        (location && `Provider serves ${location} and nearby locations`) ||
+        "Provider serves nearby locations in customer area";
+
+      service = await Service.create(
+        [
+          {
+            providerId: providerProfile._id,
+            providerName: providerProfile.displayName,
+            providerImage: providerProfile.profileImage || uploadedImage?.secure_url || "",
+            categoryId: category._id,
+            categoryName: category.name,
+            title: businessName || `${resolvedCategoryName} Service`,
+            description: normalizedDescription,
+            pricing: parsedPricing,
+            locationPolicy,
+            availability: mapAvailabilityToServiceAvailability(availabilityInput),
+            features: certificationsInput
+              ? certificationsInput
+                  .split(",")
+                  .map((item) => item.trim())
+                  .filter(Boolean)
+              : [],
+            duration: experience ? `${experience} years experience` : "1-2 hours",
+            distance: location || "Nearby",
+          },
+        ],
+        { session }
+      ).then((docs) => docs[0]);
+
+      providerProfile.services = [...(providerProfile.services || []), service._id];
+      providerProfile.categories = [...(providerProfile.categories || []), category._id];
+      await providerProfile.save({ session, validateBeforeSave: false });
     });
   } finally {
     // Always end the session whether the transaction succeeded or failed
@@ -195,7 +288,7 @@ const registerProvider = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         StatusCodes.CREATED,
-        { user: userResponse, providerProfile, accessToken, refreshToken },
+        { user: userResponse, providerProfile, service, accessToken, refreshToken },
         "Provider registered successfully"
       )
     );
