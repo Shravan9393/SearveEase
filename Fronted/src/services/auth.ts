@@ -40,13 +40,13 @@ export interface CurrentUserResponse {
     profileData?: Partial<User>;
 }
 
+
 export interface LoginCredentials {
-    email?: string;
-    userName?: string;
-    identifier?: string;
+    identifier: string;
     password: string;
     role?: 'customer' | 'provider';
 }
+
 
 export interface RegisterCustomerData {
     userName: string;
@@ -69,45 +69,50 @@ export interface RegisterProviderData {
     profileImage?: File | null;
 }
 
-const buildRegisterFormData = (data: RegisterCustomerData | RegisterProviderData): FormData => {
-    const formData = new FormData();
 
-    Object.entries(data).forEach(([key, value]) => {
-        if (value === undefined || value === null) return;
-        if (key === 'profileImage' && value instanceof File) {
-            formData.append('profileImage', value);
-            return;
-        }
-        formData.append(key, String(value));
-    });
-
-    return formData;
-};
-
-// Auth API functions
 export const authAPI = {
+   
     registerCustomer: async (data: RegisterCustomerData): Promise<AuthResponse> => {
-        const response = await api.post('/auth/register/customer', buildRegisterFormData(data));
+        const formData = new FormData();
+        formData.append('userName', data.userName);
+        formData.append('email', data.email);
+        formData.append('password', data.password);
+        formData.append('fullName', data.fullName);
+        formData.append('phone', data.phone);
+        if (data.profileImage) {
+            formData.append('profileImage', data.profileImage);
+        }
+        const response = await api.post('/auth/register/customer', formData);
         return response.data.data;
     },
 
+    
     registerProvider: async (data: RegisterProviderData): Promise<AuthResponse> => {
-        const response = await api.post('/auth/register/provider', buildRegisterFormData(data));
+        const formData = new FormData();
+        formData.append('userName', data.userName);
+        formData.append('email', data.email);
+        formData.append('password', data.password);
+        formData.append('fullName', data.fullName);
+        formData.append('phone', data.phone);
+        formData.append('displayName', data.displayName);
+        formData.append('businessName', data.businessName);
+        formData.append('description', data.description);
+        if (data.profileImage) {
+            formData.append('profileImage', data.profileImage);
+        }
+        const response = await api.post('/auth/register/provider', formData);
         return response.data.data;
     },
 
+   
     login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-        console.log('[authAPI] login request payload', {
-            identifier: credentials.identifier,
-            passwordLength: credentials.password?.length ?? 0,
-        });
         const response = await api.post('/auth/login', credentials);
         return response.data.data;
     },
 
+   
     logout: async (): Promise<void> => {
-        const response = await api.post('/auth/logout');
-        return response.data.data;
+        await api.post('/auth/logout');
     },
 
     getCurrentUser: async (): Promise<CurrentUserResponse> => {
@@ -125,12 +130,13 @@ export const authAPI = {
         return response.data.data;
     },
 
+    
     completeProviderProfile: async (data: {
         displayName: string;
         phone: string;
         businessName: string;
         description: string;
-    }) => {
+    }): Promise<AuthResponse> => {
         const response = await api.post('/auth/provider-profile/complete', data);
         return response.data.data;
     },
@@ -158,9 +164,16 @@ export const setUser = (user: User): void => {
     localStorage.setItem('user', JSON.stringify(user));
 };
 
+// FIX Bug 1: Wrapped JSON.parse in try/catch to prevent crash on corrupted storage data
 export const getUser = (): User | null => {
     const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+    if (!userStr) return null;
+    try {
+        return JSON.parse(userStr) as User;
+    } catch {
+        localStorage.removeItem('user'); // Clean up corrupt data
+        return null;
+    }
 };
 
 export default authAPI;
