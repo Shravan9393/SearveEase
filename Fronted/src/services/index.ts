@@ -10,3 +10,6 @@ export type { Category } from './categories';
 
 export { bookingsAPI } from './bookings';
 export type { Booking, CreateBookingData } from './bookings';
+
+export { providerAPI } from './provider';
+export type { ProviderDashboardData } from './provider';
