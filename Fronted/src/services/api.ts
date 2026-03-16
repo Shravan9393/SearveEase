@@ -2,6 +2,7 @@ import axios, { InternalAxiosRequestConfig, AxiosError, AxiosResponse } from 'ax
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
+
 const api = axios.create({
     baseURL: API_BASE_URL,
     withCredentials: true,
@@ -15,12 +16,12 @@ api.interceptors.request.use(
             config.headers.Authorization = `Bearer ${token}`;
         }
 
-        if (config.url?.includes('/auth/login')) {
-            const data = (config.data ?? {}) as { identifier?: string; password?: string };
-            console.log('[api] outbound /auth/login payload', {
-                identifier: data.identifier,
-                passwordLength: data.password?.length ?? 0,
-            });
+        
+        if (config.data instanceof FormData) {
+            delete config.headers['Content-Type'];
+        } else {
+            // For all non-file requests, enforce JSON
+            config.headers['Content-Type'] = 'application/json';
         }
 
         return config;
@@ -35,22 +36,23 @@ api.interceptors.response.use(
     (response: AxiosResponse) => response,
     async (error: AxiosError) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
-        
+
         if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
             originalRequest._retry = true;
-            
+
             try {
                 const refreshToken = localStorage.getItem('refreshToken');
                 if (refreshToken) {
-                    const response = await axios.post(`${API_BASE_URL}/auth/refresh-token`, 
+                    const response = await axios.post(
+                        `${API_BASE_URL}/auth/refresh-token`,
                         { refreshToken },
                         { withCredentials: true }
                     );
-                    
+
                     const { accessToken, refreshToken: newRefreshToken } = response.data.data;
                     localStorage.setItem('accessToken', accessToken);
                     localStorage.setItem('refreshToken', newRefreshToken);
-                    
+
                     originalRequest.headers.Authorization = `Bearer ${accessToken}`;
                     return api(originalRequest);
                 }
@@ -60,7 +62,7 @@ api.interceptors.response.use(
                 window.location.href = '/';
             }
         }
-        
+
         return Promise.reject(error);
     }
 );
