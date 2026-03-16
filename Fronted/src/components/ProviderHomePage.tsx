@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "motion/react"
-import { 
-  TrendingUp, 
-  Eye, 
-  CheckCircle2, 
-  DollarSign, 
-  Star, 
-  Clock,
-  MapPin,
+import {
+  TrendingUp,
+  Eye,
+  CheckCircle2,
+  DollarSign,
+  Star,
   Users,
   ArrowUp,
   ArrowDown,
@@ -18,7 +16,8 @@ import {
   Award,
   Target,
   Zap,
-  Calendar
+  Calendar,
+  Clock
 } from "lucide-react"
 import { NotificationSidebar } from "./NotificationSidebar"
 import { StatsDetailModal } from "./StatsDetailModal"
@@ -26,10 +25,41 @@ import { QueryDetailsModal } from "./QueryDetailsModal"
 import { ViewAllQueriesModal } from "./ViewAllQueriesModal"
 import { CustomerReviewsModal } from "./CustomerReviewsModal"
 import { ManageServicesModal } from "./ManageServicesModal"
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts"
+import providerAPI, { ProviderDashboardResponse } from "../services/provider"
 
 interface ProviderHomePageProps {
   user: any
+}
+
+const defaultDashboard: ProviderDashboardResponse = {
+  provider: {
+    id: "",
+    displayName: "",
+    businessName: "",
+    profileImage: "",
+    verified: false,
+    serviceCategory: "",
+    location: {},
+  },
+  stats: {
+    totalRevenue: 0,
+    revenueGrowth: 0,
+    totalServicesCompleted: 0,
+    totalCustomerProfileViews: 0,
+    activeBookings: 0,
+    pendingBookings: 0,
+    responseRate: 0,
+    completionRate: 0,
+    rating: 0,
+    reviewCount: 0,
+    uniqueCustomersServed: 0,
+  },
+  revenueData: [],
+  activityData: [],
+  services: [],
+  marketComparison: [],
+  recentQueries: [],
 }
 
 export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
@@ -42,56 +72,35 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
   const [isQueriesModalOpen, setIsQueriesModalOpen] = useState(false)
   const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false)
   const [isManageServicesModalOpen, setIsManageServicesModalOpen] = useState(false)
+  const [dashboardData, setDashboardData] = useState<ProviderDashboardResponse>(defaultDashboard)
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Mock service queries notifications
   useEffect(() => {
-    const mockNotifications = [
-      {
-        id: "1",
-        customerName: "Rahul Sharma",
-        customerAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-        service: "AC Repair",
-        location: "Koramangala, Bangalore",
-        budget: "₹500-800",
-        time: "2 min ago",
-        message: "Need urgent AC repair. Not cooling properly.",
-        status: 'pending' as const
-      },
-      {
-        id: "2",
-        customerName: "Priya Mehta",
-        customerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
-        service: "Electrical Work",
-        location: "Indiranagar, Bangalore",
-        budget: "₹300-500",
-        time: "5 min ago",
-        message: "Light fixtures installation needed in 2 rooms.",
-        status: 'pending' as const
-      },
-      {
-        id: "3",
-        customerName: "Amit Kumar",
-        customerAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
-        service: "Plumbing",
-        location: "HSR Layout, Bangalore",
-        budget: "₹400-600",
-        time: "12 min ago",
-        message: "Kitchen sink is leaking. Need immediate fix.",
-        status: 'pending' as const
+    const loadDashboard = async () => {
+      try {
+        setIsLoading(true)
+        const data = await providerAPI.getProviderDashboard()
+        setDashboardData(data)
+        setNotifications(data.recentQueries || [])
+      } catch (error) {
+        setDashboardData(defaultDashboard)
+        setNotifications([])
+      } finally {
+        setIsLoading(false)
       }
-    ]
-    
-    setNotifications(mockNotifications)
-  }, [])
+    }
+
+    loadDashboard()
+  }, [user?._id, user?.id, user?.updatedAt])
 
   const handleAcceptNotification = (id: string) => {
-    setNotifications(prev => prev.map(n => 
+    setNotifications(prev => prev.map(n =>
       n.id === id ? { ...n, status: 'accepted' as const } : n
     ))
   }
 
   const handleDenyNotification = (id: string) => {
-    setNotifications(prev => prev.map(n => 
+    setNotifications(prev => prev.map(n =>
       n.id === id ? { ...n, status: 'denied' as const } : n
     ))
   }
@@ -105,91 +114,26 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
     setIsQueryModalOpen(true)
   }
 
-  // Mock statistics
   const stats = {
-    totalRevenue: 45680,
-    revenueGrowth: 12.5,
-    profileViews: 1234,
-    viewsGrowth: 8.3,
-    completedServices: 87,
-    servicesGrowth: 15.2,
-    activeBookings: 12,
-    rating: 4.8,
-    responseRate: 95,
-    completionRate: 98
+    totalRevenue: dashboardData.stats.totalRevenue,
+    revenueGrowth: dashboardData.stats.revenueGrowth,
+    profileViews: dashboardData.stats.totalCustomerProfileViews,
+    completedServices: dashboardData.stats.totalServicesCompleted,
+    activeBookings: dashboardData.stats.activeBookings,
+    pendingBookings: dashboardData.stats.pendingBookings,
+    rating: dashboardData.stats.rating,
+    responseRate: dashboardData.stats.responseRate,
+    completionRate: dashboardData.stats.completionRate
   }
 
-  // Revenue data for chart
-  const revenueData = [
-    { month: "Jan", revenue: 28000, bookings: 45 },
-    { month: "Feb", revenue: 32000, bookings: 52 },
-    { month: "Mar", revenue: 35000, bookings: 58 },
-    { month: "Apr", revenue: 38000, bookings: 61 },
-    { month: "May", revenue: 42000, bookings: 69 },
-    { month: "Jun", revenue: 45680, bookings: 74 }
-  ]
-
-  // Daily activity data
-  const activityData = [
-    { day: "Mon", queries: 12, bookings: 5 },
-    { day: "Tue", queries: 15, bookings: 7 },
-    { day: "Wed", queries: 8, bookings: 4 },
-    { day: "Thu", queries: 18, bookings: 9 },
-    { day: "Fri", queries: 14, bookings: 6 },
-    { day: "Sat", queries: 22, bookings: 11 },
-    { day: "Sun", queries: 10, bookings: 4 }
-  ]
-
-  // Active listings
-  const listings = [
-    {
-      id: "1",
-      service: user.serviceCategory || "AC Repair & Maintenance",
-      price: "₹500-1500",
-      bookings: 24,
-      revenue: "₹18,400",
-      status: "active",
-      views: 245,
-      rating: 4.9
-    },
-    {
-      id: "2",
-      service: "Emergency Repair Service",
-      price: "₹800-2000",
-      bookings: 15,
-      revenue: "₹12,200",
-      status: "active",
-      views: 178,
-      rating: 4.7
-    },
-    {
-      id: "3",
-      service: "Regular Maintenance",
-      price: "₹300-800",
-      bookings: 48,
-      revenue: "₹15,080",
-      status: "active",
-      views: 312,
-      rating: 4.8
-    }
-  ]
-
-  // Competitor pricing insights
-  const competitorData = [
-    {
-      category: user.serviceCategory || "AC Repair & Maintenance",
-      yourPrice: "₹500-1500",
-      avgMarketPrice: "₹600-1600",
-      lowestPrice: "₹400-1200",
-      highestPrice: "₹800-2000",
-      marketPosition: "Competitive"
-    }
-  ]
+  const revenueData = dashboardData.revenueData
+  const activityData = dashboardData.activityData
+  const listings = dashboardData.services
+  const competitorData = dashboardData.marketComparison
 
   return (
     <div className="min-h-screen pt-20 pb-32 px-4 md:px-8">
-      {/* Notification Sidebar */}
-      <NotificationSidebar 
+      <NotificationSidebar
         notifications={notifications}
         onAccept={handleAcceptNotification}
         onDeny={handleDenyNotification}
@@ -197,12 +141,11 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
         onCollapseChange={setIsSidebarCollapsed}
       />
 
-      <motion.div 
+      <motion.div
         animate={{ marginRight: isSidebarCollapsed ? 0 : 384 }}
         transition={{ duration: 0.3 }}
         className="max-w-7xl mx-auto space-y-6"
       >
-        {/* Welcome Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -213,11 +156,10 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              {/* Profile Picture */}
               <div className="relative">
-                <img 
-                  src={user.profilePhoto || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face"} 
-                  alt={user.name}
+                <img
+                  src={dashboardData.provider.profileImage || user.profilePhoto || user.profileImage || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face"}
+                  alt={dashboardData.provider.displayName || user.name}
                   className="w-16 h-16 rounded-full object-cover border-2 border-primary/50"
                   style={{
                     boxShadow: '0 0 15px rgba(88, 129, 87, 0.4)'
@@ -227,10 +169,10 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
               </div>
               <div>
                 <h1 className="text-2xl text-foreground mb-1">
-                  Welcome back, {user.name}! 👋
+                  Welcome back, {dashboardData.provider.displayName || user.name}! 👋
                 </h1>
                 <p className="text-muted-foreground">
-                  Here's what's happening with your services today
+                  Here's what's happening with your services
                 </p>
               </div>
             </div>
@@ -242,7 +184,7 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
                 </div>
                 <p className="text-xs text-muted-foreground">Your Rating</p>
               </div>
-              {user.verified && (
+              {(dashboardData.provider.verified || user.verified) && (
                 <div className="px-3 py-2 bg-primary/10 rounded-xl border border-primary/20">
                   <Award size={20} className="text-primary" />
                 </div>
@@ -251,9 +193,7 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
           </div>
         </motion.div>
 
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Total Revenue */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -261,21 +201,14 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
             whileHover={{ scale: 1.02 }}
             onClick={() => setDetailModalType('revenue')}
             className="glass-card p-5 rounded-2xl border border-primary/30 relative overflow-hidden group cursor-pointer"
-            style={{
-              boxShadow: '0 0 20px rgba(88, 129, 87, 0.3), inset 0 0 15px rgba(88, 129, 87, 0.05)'
-            }}
+            style={{ boxShadow: '0 0 20px rgba(88, 129, 87, 0.3), inset 0 0 15px rgba(88, 129, 87, 0.05)' }}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative">
               <div className="flex items-center justify-between mb-3">
                 <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
                   <DollarSign size={20} className="text-primary" />
                 </div>
-                <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${
-                  stats.revenueGrowth > 0 
-                    ? 'bg-green-500/10 text-green-600 dark:text-green-400' 
-                    : 'bg-red-500/10 text-red-600 dark:text-red-400'
-                }`}>
+                <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${stats.revenueGrowth > 0 ? 'bg-green-500/10 text-green-600 dark:text-green-400' : 'bg-red-500/10 text-red-600 dark:text-red-400'}`}>
                   {stats.revenueGrowth > 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
                   {Math.abs(stats.revenueGrowth)}%
                 </div>
@@ -285,442 +218,91 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
             </div>
           </motion.div>
 
-          {/* Profile Views */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            whileHover={{ scale: 1.02 }}
-            className="glass-card p-5 rounded-2xl border border-primary/30 relative overflow-hidden group cursor-pointer"
-            style={{
-              boxShadow: '0 0 20px rgba(88, 129, 87, 0.3), inset 0 0 15px rgba(88, 129, 87, 0.05)'
-            }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-sage-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} whileHover={{ scale: 1.02 }} className="glass-card p-5 rounded-2xl border border-primary/30 relative overflow-hidden group cursor-pointer" style={{ boxShadow: '0 0 20px rgba(88, 129, 87, 0.3), inset 0 0 15px rgba(88, 129, 87, 0.05)' }}>
             <div className="relative">
               <div className="flex items-center justify-between mb-3">
-                <div className="w-10 h-10 bg-sage-500/10 rounded-xl flex items-center justify-center">
-                  <Eye size={20} className="text-sage-600 dark:text-sage-400" />
-                </div>
-                <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${
-                  stats.viewsGrowth > 0 
-                    ? 'bg-green-500/10 text-green-600 dark:text-green-400' 
-                    : 'bg-red-500/10 text-red-600 dark:text-red-400'
-                }`}>
-                  {stats.viewsGrowth > 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-                  {Math.abs(stats.viewsGrowth)}%
-                </div>
+                <div className="w-10 h-10 bg-sage-500/10 rounded-xl flex items-center justify-center"><Eye size={20} className="text-sage-600 dark:text-sage-400" /></div>
               </div>
               <p className="text-2xl text-foreground mb-1">{stats.profileViews.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">Profile Views</p>
+              <p className="text-xs text-muted-foreground">Customer Profile Views</p>
             </div>
           </motion.div>
 
-          {/* Completed Services */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            whileHover={{ scale: 1.02 }}
-            onClick={() => setDetailModalType('completed')}
-            className="glass-card p-5 rounded-2xl border border-primary/30 relative overflow-hidden group cursor-pointer"
-            style={{
-              boxShadow: '0 0 20px rgba(88, 129, 87, 0.3), inset 0 0 15px rgba(88, 129, 87, 0.05)'
-            }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} whileHover={{ scale: 1.02 }} onClick={() => setDetailModalType('completed')} className="glass-card p-5 rounded-2xl border border-primary/30 relative overflow-hidden group cursor-pointer" style={{ boxShadow: '0 0 20px rgba(88, 129, 87, 0.3), inset 0 0 15px rgba(88, 129, 87, 0.05)' }}>
             <div className="relative">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-10 h-10 bg-green-500/10 rounded-xl flex items-center justify-center">
-                  <CheckCircle2 size={20} className="text-green-600 dark:text-green-400" />
-                </div>
-                <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${
-                  stats.servicesGrowth > 0 
-                    ? 'bg-green-500/10 text-green-600 dark:text-green-400' 
-                    : 'bg-red-500/10 text-red-600 dark:text-red-400'
-                }`}>
-                  {stats.servicesGrowth > 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-                  {Math.abs(stats.servicesGrowth)}%
-                </div>
-              </div>
+              <div className="flex items-center justify-between mb-3"><div className="w-10 h-10 bg-green-500/10 rounded-xl flex items-center justify-center"><CheckCircle2 size={20} className="text-green-600 dark:text-green-400" /></div></div>
               <p className="text-2xl text-foreground mb-1">{stats.completedServices}</p>
               <p className="text-xs text-muted-foreground">Services Completed</p>
             </div>
           </motion.div>
 
-          {/* Active Bookings */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            whileHover={{ scale: 1.02 }}
-            onClick={() => setDetailModalType('bookings')}
-            className="glass-card p-5 rounded-2xl border border-primary/30 relative overflow-hidden group cursor-pointer"
-            style={{
-              boxShadow: '0 0 20px rgba(88, 129, 87, 0.3), inset 0 0 15px rgba(88, 129, 87, 0.05)'
-            }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} whileHover={{ scale: 1.02 }} onClick={() => setDetailModalType('bookings')} className="glass-card p-5 rounded-2xl border border-primary/30 relative overflow-hidden group cursor-pointer" style={{ boxShadow: '0 0 20px rgba(88, 129, 87, 0.3), inset 0 0 15px rgba(88, 129, 87, 0.05)' }}>
             <div className="relative">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-10 h-10 bg-orange-500/10 rounded-xl flex items-center justify-center">
-                  <Calendar size={20} className="text-orange-600 dark:text-orange-400" />
-                </div>
-                <div className="px-2 py-1 bg-orange-500/10 text-orange-600 dark:text-orange-400 text-xs rounded-full">
-                  Active
-                </div>
-              </div>
+              <div className="flex items-center justify-between mb-3"><div className="w-10 h-10 bg-orange-500/10 rounded-xl flex items-center justify-center"><Calendar size={20} className="text-orange-600 dark:text-orange-400" /></div></div>
               <p className="text-2xl text-foreground mb-1">{stats.activeBookings}</p>
               <p className="text-xs text-muted-foreground">Active Bookings</p>
             </div>
           </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }} whileHover={{ scale: 1.02 }} className="glass-card p-5 rounded-2xl border border-primary/30 relative overflow-hidden group cursor-pointer" style={{ boxShadow: '0 0 20px rgba(88, 129, 87, 0.3), inset 0 0 15px rgba(88, 129, 87, 0.05)' }}>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-3"><div className="w-10 h-10 bg-yellow-500/10 rounded-xl flex items-center justify-center"><Clock size={20} className="text-yellow-600 dark:text-yellow-400" /></div></div>
+              <p className="text-2xl text-foreground mb-1">{stats.pendingBookings}</p>
+              <p className="text-xs text-muted-foreground">Pending Bookings</p>
+            </div>
+          </motion.div>
         </div>
 
-        {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Revenue Chart */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="glass-card p-6 rounded-2xl border border-primary/30"
-            style={{
-              boxShadow: '0 0 20px rgba(88, 129, 87, 0.3), inset 0 0 15px rgba(88, 129, 87, 0.05)'
-            }}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg text-foreground mb-1">Revenue Overview</h3>
-                <p className="text-xs text-muted-foreground">Last 6 months performance</p>
-              </div>
-              <TrendingUp size={20} className="text-primary" />
-            </div>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="glass-card p-6 rounded-2xl border border-primary/30" style={{ boxShadow: '0 0 20px rgba(88, 129, 87, 0.3), inset 0 0 15px rgba(88, 129, 87, 0.05)' }}>
+            <div className="flex items-center justify-between mb-6"><div><h3 className="text-lg text-foreground mb-1">Revenue Growth</h3><p className="text-xs text-muted-foreground">Last 6 months performance</p></div><TrendingUp size={20} className="text-primary" /></div>
             <ResponsiveContainer width="100%" height={250}>
-              <AreaChart data={revenueData}>
-                <defs>
-                  <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#588157" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#588157" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(163, 177, 138, 0.1)" />
-                <XAxis 
-                  dataKey="month" 
-                  stroke="rgba(163, 177, 138, 0.5)" 
-                  style={{ fontSize: '12px' }}
-                />
-                <YAxis 
-                  stroke="rgba(163, 177, 138, 0.5)" 
-                  style={{ fontSize: '12px' }}
-                />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'rgba(218, 215, 205, 0.9)',
-                    border: '1px solid rgba(163, 177, 138, 0.2)',
-                    borderRadius: '12px',
-                    backdropFilter: 'blur(10px)'
-                  }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="revenue" 
-                  stroke="#588157" 
-                  strokeWidth={2}
-                  fill="url(#revenueGradient)" 
-                />
-              </AreaChart>
+              <AreaChart data={revenueData}><defs><linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#588157" stopOpacity={0.3}/><stop offset="95%" stopColor="#588157" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="rgba(163, 177, 138, 0.1)" /><XAxis dataKey="month" stroke="rgba(163, 177, 138, 0.5)" style={{ fontSize: '12px' }} /><YAxis stroke="rgba(163, 177, 138, 0.5)" style={{ fontSize: '12px' }} /><Tooltip /><Area type="monotone" dataKey="revenue" stroke="#588157" strokeWidth={2} fill="url(#revenueGradient)" /></AreaChart>
             </ResponsiveContainer>
           </motion.div>
 
-          {/* Activity Chart */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="glass-card p-6 rounded-2xl border border-primary/30"
-            style={{
-              boxShadow: '0 0 20px rgba(88, 129, 87, 0.3), inset 0 0 15px rgba(88, 129, 87, 0.05)'
-            }}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg text-foreground mb-1">Weekly Activity</h3>
-                <p className="text-xs text-muted-foreground">Queries vs Bookings</p>
-              </div>
-              <Activity size={20} className="text-sage-600 dark:text-sage-400" />
-            </div>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={activityData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(163, 177, 138, 0.1)" />
-                <XAxis 
-                  dataKey="day" 
-                  stroke="rgba(163, 177, 138, 0.5)" 
-                  style={{ fontSize: '12px' }}
-                />
-                <YAxis 
-                  stroke="rgba(163, 177, 138, 0.5)" 
-                  style={{ fontSize: '12px' }}
-                />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'rgba(218, 215, 205, 0.9)',
-                    border: '1px solid rgba(163, 177, 138, 0.2)',
-                    borderRadius: '12px',
-                    backdropFilter: 'blur(10px)'
-                  }}
-                />
-                <Bar dataKey="queries" fill="#A3B18A" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="bookings" fill="#588157" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="glass-card p-6 rounded-2xl border border-primary/30" style={{ boxShadow: '0 0 20px rgba(88, 129, 87, 0.3), inset 0 0 15px rgba(88, 129, 87, 0.05)' }}>
+            <div className="flex items-center justify-between mb-6"><div><h3 className="text-lg text-foreground mb-1">Weekly Activity</h3><p className="text-xs text-muted-foreground">Queries vs Bookings</p></div><Activity size={20} className="text-sage-600 dark:text-sage-400" /></div>
+            <ResponsiveContainer width="100%" height={250}><BarChart data={activityData}><CartesianGrid strokeDasharray="3 3" stroke="rgba(163, 177, 138, 0.1)" /><XAxis dataKey="day" stroke="rgba(163, 177, 138, 0.5)" style={{ fontSize: '12px' }} /><YAxis stroke="rgba(163, 177, 138, 0.5)" style={{ fontSize: '12px' }} /><Tooltip /><Bar dataKey="queries" fill="#A3B18A" radius={[8, 8, 0, 0]} /><Bar dataKey="bookings" fill="#588157" radius={[8, 8, 0, 0]} /></BarChart></ResponsiveContainer>
           </motion.div>
         </div>
 
-        {/* Performance Metrics */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-          className="glass-card p-6 rounded-2xl border border-primary/30"
-          style={{
-            boxShadow: '0 0 20px rgba(88, 129, 87, 0.3), inset 0 0 15px rgba(88, 129, 87, 0.05)'
-          }}
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }} className="glass-card p-6 rounded-2xl border border-primary/30" style={{ boxShadow: '0 0 20px rgba(88, 129, 87, 0.3), inset 0 0 15px rgba(88, 129, 87, 0.05)' }}>
           <h3 className="text-lg text-foreground mb-4">Performance Metrics</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-primary/5 to-transparent rounded-xl">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                <Zap size={24} className="text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl text-foreground">{stats.responseRate}%</p>
-                <p className="text-xs text-muted-foreground">Response Rate</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-green-500/5 to-transparent rounded-xl">
-              <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center">
-                <Target size={24} className="text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <p className="text-2xl text-foreground">{stats.completionRate}%</p>
-                <p className="text-xs text-muted-foreground">Completion Rate</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-yellow-500/5 to-transparent rounded-xl">
-              <div className="w-12 h-12 bg-yellow-500/10 rounded-full flex items-center justify-center">
-                <Star size={24} className="text-yellow-600 dark:text-yellow-400" />
-              </div>
-              <div>
-                <p className="text-2xl text-foreground">{stats.rating}</p>
-                <p className="text-xs text-muted-foreground">Average Rating</p>
-              </div>
-            </div>
+            <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-primary/5 to-transparent rounded-xl"><div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center"><Zap size={24} className="text-primary" /></div><div><p className="text-2xl text-foreground">{stats.responseRate}%</p><p className="text-xs text-muted-foreground">Response Rate</p></div></div>
+            <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-green-500/5 to-transparent rounded-xl"><div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center"><Target size={24} className="text-green-600 dark:text-green-400" /></div><div><p className="text-2xl text-foreground">{stats.completionRate}%</p><p className="text-xs text-muted-foreground">Completion Rate</p></div></div>
+            <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-yellow-500/5 to-transparent rounded-xl"><div className="w-12 h-12 bg-yellow-500/10 rounded-full flex items-center justify-center"><Star size={24} className="text-yellow-600 dark:text-yellow-400" /></div><div><p className="text-2xl text-foreground">{stats.rating}</p><p className="text-xs text-muted-foreground">Average Rating</p></div></div>
           </div>
         </motion.div>
 
-        {/* Active Listings */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-          className="glass-card p-6 rounded-2xl border border-primary/30"
-          style={{
-            boxShadow: '0 0 20px rgba(88, 129, 87, 0.3), inset 0 0 15px rgba(88, 129, 87, 0.05)'
-          }}
-        >
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-lg text-foreground mb-1">Your Service Listings</h3>
-              <p className="text-xs text-muted-foreground">Manage and track your services</p>
-            </div>
-            <button className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl transition-all text-sm">
-              Add New Service
-            </button>
-          </div>
-
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} className="glass-card p-6 rounded-2xl border border-primary/30" style={{ boxShadow: '0 0 20px rgba(88, 129, 87, 0.3), inset 0 0 15px rgba(88, 129, 87, 0.05)' }}>
+          <div className="flex items-center justify-between mb-6"><div><h3 className="text-lg text-foreground mb-1">My Services</h3><p className="text-xs text-muted-foreground">Manage and track your services</p></div><button className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl transition-all text-sm">Add New Service</button></div>
           <div className="space-y-4">
             {listings.slice(0, showAllListings ? listings.length : 3).map((listing, index) => (
-              <motion.div
-                key={listing.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.9 + index * 0.1 }}
-                className="p-4 bg-gradient-to-r from-sage-100/50 to-transparent dark:from-sage-900/20 rounded-xl border border-sage-200/20 dark:border-sage-700/30 hover:border-primary/30 transition-all"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h4 className="text-foreground">{listing.service}</h4>
-                      <span className="px-2 py-1 bg-green-500/10 text-green-600 dark:text-green-400 text-xs rounded-full">
-                        {listing.status}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <DollarSign size={14} />
-                        {listing.price}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Package size={14} />
-                        {listing.bookings} bookings
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Eye size={14} />
-                        {listing.views} views
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Star size={14} className="fill-yellow-500 text-yellow-500" />
-                        {listing.rating}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg text-primary">{listing.revenue}</p>
-                    <p className="text-xs text-muted-foreground">Total Revenue</p>
-                  </div>
-                </div>
+              <motion.div key={listing.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.9 + index * 0.1 }} className="p-4 bg-gradient-to-r from-sage-100/50 to-transparent dark:from-sage-900/20 rounded-xl border border-sage-200/20 dark:border-sage-700/30 hover:border-primary/30 transition-all">
+                <div className="flex items-center justify-between"><div className="flex-1"><div className="flex items-center gap-3 mb-2"><h4 className="text-foreground">{listing.service}</h4><span className="px-2 py-1 bg-green-500/10 text-green-600 dark:text-green-400 text-xs rounded-full">{listing.status}</span></div><div className="flex items-center gap-6 text-sm text-muted-foreground"><span className="flex items-center gap-1"><DollarSign size={14} />{listing.price}</span><span className="flex items-center gap-1"><Package size={14} />{listing.bookings} bookings</span><span className="flex items-center gap-1"><Users size={14} />{listing.customers} customers</span><span className="flex items-center gap-1"><Star size={14} className="fill-yellow-500 text-yellow-500" />{listing.rating}</span></div></div><div className="text-right"><p className="text-lg text-primary">₹{listing.revenue.toLocaleString()}</p><p className="text-xs text-muted-foreground">Total Revenue</p></div></div>
               </motion.div>
             ))}
           </div>
-
-          {listings.length > 3 && (
-            <button
-              onClick={() => setShowAllListings(!showAllListings)}
-              className="mt-4 w-full py-2 text-sm text-primary hover:bg-primary/5 rounded-lg transition-all"
-            >
-              {showAllListings ? 'Show Less' : `Show All (${listings.length})`}
-            </button>
-          )}
+          {listings.length > 3 && <button onClick={() => setShowAllListings(!showAllListings)} className="mt-4 w-full py-2 text-sm text-primary hover:bg-primary/5 rounded-lg transition-all">{showAllListings ? 'Show Less' : `Show All (${listings.length})`}</button>}
         </motion.div>
 
-        {/* Competitor Pricing Insights */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.0 }}
-          className="glass-card p-6 rounded-2xl border border-primary/30"
-          style={{
-            boxShadow: '0 0 20px rgba(88, 129, 87, 0.3), inset 0 0 15px rgba(88, 129, 87, 0.05)'
-          }}
-        >
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-lg text-foreground mb-1">Market Pricing Insights</h3>
-              <p className="text-xs text-muted-foreground">Compare your pricing with competitors</p>
-            </div>
-            <BarChart3 size={20} className="text-sage-600 dark:text-sage-400" />
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-sage-200/20 dark:border-sage-700/30">
-                  <th className="text-left py-3 px-4 text-sm text-muted-foreground">Category</th>
-                  <th className="text-left py-3 px-4 text-sm text-muted-foreground">Your Price</th>
-                  <th className="text-left py-3 px-4 text-sm text-muted-foreground">Avg Market</th>
-                  <th className="text-left py-3 px-4 text-sm text-muted-foreground">Lowest</th>
-                  <th className="text-left py-3 px-4 text-sm text-muted-foreground">Highest</th>
-                  <th className="text-left py-3 px-4 text-sm text-muted-foreground">Position</th>
-                </tr>
-              </thead>
-              <tbody>
-                {competitorData.map((data, index) => (
-                  <tr key={index} className="border-b border-sage-200/10 dark:border-sage-700/20 hover:bg-sage-100/30 dark:hover:bg-sage-900/20 transition-colors">
-                    <td className="py-4 px-4 text-sm text-foreground">{data.category}</td>
-                    <td className="py-4 px-4 text-sm text-primary">{data.yourPrice}</td>
-                    <td className="py-4 px-4 text-sm text-muted-foreground">{data.avgMarketPrice}</td>
-                    <td className="py-4 px-4 text-sm text-green-600 dark:text-green-400">{data.lowestPrice}</td>
-                    <td className="py-4 px-4 text-sm text-red-600 dark:text-red-400">{data.highestPrice}</td>
-                    <td className="py-4 px-4">
-                      <span className="px-3 py-1 bg-primary/10 text-primary text-xs rounded-full">
-                        {data.marketPosition}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-4 p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Activity size={16} className="text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <p className="text-sm text-foreground mb-1">Pricing Recommendation</p>
-                <p className="text-xs text-muted-foreground">
-                  Your pricing is competitive and well-positioned in the market. Consider offering promotional packages during off-peak hours to increase bookings by up to 20%.
-                </p>
-              </div>
-            </div>
-          </div>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.0 }} className="glass-card p-6 rounded-2xl border border-primary/30" style={{ boxShadow: '0 0 20px rgba(88, 129, 87, 0.3), inset 0 0 15px rgba(88, 129, 87, 0.05)' }}>
+          <div className="flex items-center justify-between mb-6"><div><h3 className="text-lg text-foreground mb-1">Price Comparison</h3><p className="text-xs text-muted-foreground">Compare your pricing with market pricing</p></div><BarChart3 size={20} className="text-sage-600 dark:text-sage-400" /></div>
+          <div className="overflow-x-auto"><table className="w-full"><thead><tr className="border-b border-sage-200/20 dark:border-sage-700/30"><th className="text-left py-3 px-4 text-sm text-muted-foreground">Category</th><th className="text-left py-3 px-4 text-sm text-muted-foreground">Your Price</th><th className="text-left py-3 px-4 text-sm text-muted-foreground">Avg Market</th><th className="text-left py-3 px-4 text-sm text-muted-foreground">Lowest</th><th className="text-left py-3 px-4 text-sm text-muted-foreground">Highest</th><th className="text-left py-3 px-4 text-sm text-muted-foreground">Position</th></tr></thead><tbody>{competitorData.map((data, index) => (<tr key={index} className="border-b border-sage-200/10 dark:border-sage-700/20 hover:bg-sage-100/30 dark:hover:bg-sage-900/20 transition-colors"><td className="py-4 px-4 text-sm text-foreground">{data.category}</td><td className="py-4 px-4 text-sm text-primary">₹{data.yourPrice}</td><td className="py-4 px-4 text-sm text-muted-foreground">₹{data.avgMarketPrice}</td><td className="py-4 px-4 text-sm text-green-600 dark:text-green-400">₹{data.lowestPrice}</td><td className="py-4 px-4 text-sm text-red-600 dark:text-red-400">₹{data.highestPrice}</td><td className="py-4 px-4"><span className="px-3 py-1 bg-primary/10 text-primary text-xs rounded-full">{data.marketPosition}</span></td></tr>))}</tbody></table></div>
+          <div className="mt-4 p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl"><div className="flex items-start gap-3"><div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"><Activity size={16} className="text-blue-600 dark:text-blue-400" /></div><div><p className="text-sm text-foreground mb-1">Pricing Recommendation</p><p className="text-xs text-muted-foreground">Use your market position to adjust promotions and increase conversion for slower days.</p></div></div></div>
         </motion.div>
 
-        {/* Quick Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.1 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-4"
-        >
-          <button 
-            onClick={() => setIsQueriesModalOpen(true)}
-            className="glass-card p-6 rounded-2xl border border-primary/30 hover:border-primary/50 transition-all text-left group"
-            style={{
-              boxShadow: '0 0 15px rgba(88, 129, 87, 0.2), inset 0 0 10px rgba(88, 129, 87, 0.05)'
-            }}
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Bell size={24} className="text-primary" />
-              </div>
-              <div>
-                <p className="text-foreground mb-1">View All Queries</p>
-                <p className="text-xs text-muted-foreground">{notifications.filter(n => !n.status || n.status === 'pending').length} new requests</p>
-              </div>
-            </div>
-          </button>
-
-          <button 
-            onClick={() => setIsReviewsModalOpen(true)}
-            className="glass-card p-6 rounded-2xl border border-primary/30 hover:border-primary/50 transition-all text-left group"
-            style={{
-              boxShadow: '0 0 15px rgba(88, 129, 87, 0.2), inset 0 0 10px rgba(88, 129, 87, 0.05)'
-            }}
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-sage-500/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Users size={24} className="text-sage-600 dark:text-sage-400" />
-              </div>
-              <div>
-                <p className="text-foreground mb-1">Customer Reviews</p>
-                <p className="text-xs text-muted-foreground">Manage your reputation</p>
-              </div>
-            </div>
-          </button>
-
-          <button 
-            onClick={() => setIsManageServicesModalOpen(true)}
-            className="glass-card p-6 rounded-2xl border border-primary/30 hover:border-primary/50 transition-all text-left group"
-            style={{
-              boxShadow: '0 0 15px rgba(88, 129, 87, 0.2), inset 0 0 10px rgba(88, 129, 87, 0.05)'
-            }}
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Package size={24} className="text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <p className="text-foreground mb-1">Manage Services</p>
-                <p className="text-xs text-muted-foreground">Edit your listings</p>
-              </div>
-            </div>
-          </button>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.1 }} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button onClick={() => setIsQueriesModalOpen(true)} className="glass-card p-6 rounded-2xl border border-primary/30 hover:border-primary/50 transition-all text-left group" style={{ boxShadow: '0 0 15px rgba(88, 129, 87, 0.2), inset 0 0 10px rgba(88, 129, 87, 0.05)' }}><div className="flex items-center gap-4"><div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"><Bell size={24} className="text-primary" /></div><div><p className="text-foreground mb-1">View All Queries</p><p className="text-xs text-muted-foreground">{notifications.filter(n => !n.status || n.status === 'pending').length} new requests</p></div></div></button>
+          <button onClick={() => setIsReviewsModalOpen(true)} className="glass-card p-6 rounded-2xl border border-primary/30 hover:border-primary/50 transition-all text-left group" style={{ boxShadow: '0 0 15px rgba(88, 129, 87, 0.2), inset 0 0 10px rgba(88, 129, 87, 0.05)' }}><div className="flex items-center gap-4"><div className="w-12 h-12 bg-sage-500/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"><Users size={24} className="text-sage-600 dark:text-sage-400" /></div><div><p className="text-foreground mb-1">Customer Reviews</p><p className="text-xs text-muted-foreground">Manage your reputation</p></div></div></button>
+          <button onClick={() => setIsManageServicesModalOpen(true)} className="glass-card p-6 rounded-2xl border border-primary/30 hover:border-primary/50 transition-all text-left group" style={{ boxShadow: '0 0 15px rgba(88, 129, 87, 0.2), inset 0 0 10px rgba(88, 129, 87, 0.05)' }}><div className="flex items-center gap-4"><div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"><Package size={24} className="text-green-600 dark:text-green-400" /></div><div><p className="text-foreground mb-1">Manage Services</p><p className="text-xs text-muted-foreground">Edit your listings</p></div></div></button>
         </motion.div>
       </motion.div>
 
-      {/* Query Details Modal */}
+      {isLoading && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm">Loading dashboard…</div>}
+
       <AnimatePresence>
         {isQueryModalOpen && (
           <QueryDetailsModal
@@ -731,7 +313,6 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
         )}
       </AnimatePresence>
 
-      {/* Stats Detail Modal */}
       <AnimatePresence>
         {detailModalType && (
           <StatsDetailModal
@@ -742,7 +323,6 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
         )}
       </AnimatePresence>
 
-      {/* View All Queries Modal */}
       <AnimatePresence>
         {isQueriesModalOpen && (
           <ViewAllQueriesModal
@@ -752,7 +332,6 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
         )}
       </AnimatePresence>
 
-      {/* Customer Reviews Modal */}
       <AnimatePresence>
         {isReviewsModalOpen && (
           <CustomerReviewsModal
@@ -762,7 +341,6 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
         )}
       </AnimatePresence>
 
-      {/* Manage Services Modal */}
       <AnimatePresence>
         {isManageServicesModalOpen && (
           <ManageServicesModal
