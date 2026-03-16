@@ -27,7 +27,8 @@ const generateAccessAndRefreshToken = async (userId) => {
   return { accessToken, refreshToken };
 };
 
-const normalizeString = (value) => (typeof value === "string" ? value.trim() : "");
+const normalizeString = (value) =>
+  typeof value === "string" ? value.trim() : "";
 
 /* ----------------------------------
    Register Customer
@@ -39,7 +40,7 @@ const registerCustomer = asyncHandler(async (req, res) => {
   const fullName = normalizeString(req.body.fullName);
   const phone = normalizeString(req.body.phone);
 
-  if ([userName, email, password, fullName, phone].some((value) => !value)) {
+  if ([userName, email, password, fullName, phone].some((v) => !v)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "All fields are required");
   }
 
@@ -50,7 +51,18 @@ const registerCustomer = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.CONFLICT, "User already exists");
   }
 
-  const uploadedImage = req.file ? await uploadOnCloudinary(req.file.path) : null;
+  // req.file is set by the multer handleUpload wrapper in register.routes.js.
+  // If no image was selected by the user, req.file is undefined and
+  // profileImage is stored as null — this is intentional and non-fatal.
+  let uploadedImage = null;
+  if (req.file?.path) {
+    uploadedImage = await uploadOnCloudinary(req.file.path);
+    if (!uploadedImage) {
+      console.warn(
+        "[registerCustomer] Cloudinary upload failed — storing profileImage as null."
+      );
+    }
+  }
 
   const user = await User.create({
     userName: userName.toLowerCase(),
@@ -58,25 +70,34 @@ const registerCustomer = asyncHandler(async (req, res) => {
     email,
     password,
     role: "customer",
-    profileImage: uploadedImage?.secure_url,
+    profileImage: uploadedImage?.secure_url || null,
   });
 
   const customerProfile = await CustomerProfile.create({
     userId: user._id,
     fullName,
     phone,
-    profileImage: uploadedImage?.secure_url,
+    profileImage: uploadedImage?.secure_url || null,
   });
 
-  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
-
-  return res.status(StatusCodes.CREATED).json(
-    new ApiResponse(
-      StatusCodes.CREATED,
-      { user, customerProfile, accessToken, refreshToken },
-      "Customer registered successfully"
-    )
+  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+    user._id
   );
+
+  // Strip sensitive fields before sending response
+  const userResponse = user.toObject();
+  delete userResponse.password;
+  delete userResponse.refreshToken;
+
+  return res
+    .status(StatusCodes.CREATED)
+    .json(
+      new ApiResponse(
+        StatusCodes.CREATED,
+        { user: userResponse, customerProfile, accessToken, refreshToken },
+        "Customer registered successfully"
+      )
+    );
 });
 
 /* ----------------------------------
@@ -92,8 +113,13 @@ const registerProvider = asyncHandler(async (req, res) => {
   const businessName = normalizeString(req.body.businessName);
   const description = normalizeString(req.body.description);
 
-  if ([userName, email, password, fullName, phone, displayName].some((value) => !value)) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "All required fields are mandatory");
+  if (
+    [userName, email, password, fullName, phone, displayName].some((v) => !v)
+  ) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "All required fields are mandatory"
+    );
   }
 
   const existingUser = await User.findOne({
@@ -103,54 +129,76 @@ const registerProvider = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.CONFLICT, "User already exists");
   }
 
-  const uploadedImage = req.file ? await uploadOnCloudinary(req.file.path) : null;
+  // Upload image BEFORE the transaction so the DB session stays short and
+  // isn't held open during a potentially slow Cloudinary network call.
+  let uploadedImage = null;
+  if (req.file?.path) {
+    uploadedImage = await uploadOnCloudinary(req.file.path);
+    if (!uploadedImage) {
+      console.warn(
+        "[registerProvider] Cloudinary upload failed — storing profileImage as null."
+      );
+    }
+  }
 
   const session = await mongoose.startSession();
   let user;
   let providerProfile;
 
-  await session.withTransaction(async () => {
-    user = await User.create(
-      [
-        {
-          userName: userName.toLowerCase(),
-          fullName,
-          email,
-          password,
-          role: "provider",
-          profileImage: uploadedImage?.secure_url,
-        },
-      ],
-      { session }
-    ).then((docs) => docs[0]);
+  try {
+    await session.withTransaction(async () => {
+      user = await User.create(
+        [
+          {
+            userName: userName.toLowerCase(),
+            fullName,
+            email,
+            password,
+            role: "provider",
+            profileImage: uploadedImage?.secure_url || null,
+          },
+        ],
+        { session }
+      ).then((docs) => docs[0]);
 
-    providerProfile = await ProviderProfile.create(
-      [
-        {
-          userId: user._id,
-          businessName,
-          displayName,
-          phone,
-          description: description || "Service provider",
-          pricing: { starting: 0 },
-          profileImage: uploadedImage?.secure_url,
-        },
-      ],
-      { session }
-    ).then((docs) => docs[0]);
-  });
+      providerProfile = await ProviderProfile.create(
+        [
+          {
+            userId: user._id,
+            businessName,
+            displayName,
+            phone,
+            description: description || "Service provider",
+            pricing: { starting: 0 },
+            profileImage: uploadedImage?.secure_url || null,
+          },
+        ],
+        { session }
+      ).then((docs) => docs[0]);
+    });
+  } finally {
+    // Always end the session whether the transaction succeeded or failed
+    await session.endSession();
+  }
 
-  await session.endSession();
-
-  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
-
-  return res.status(StatusCodes.CREATED).json(
-    new ApiResponse(
-      StatusCodes.CREATED,
-      { user, providerProfile, accessToken, refreshToken },
-      "Provider registered successfully"
-    )
+  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+    user._id
   );
+
+  // Strip sensitive fields before sending response
+  const userResponse = user.toObject();
+  delete userResponse.password;
+  delete userResponse.refreshToken;
+
+  return res
+    .status(StatusCodes.CREATED)
+    .json(
+      new ApiResponse(
+        StatusCodes.CREATED,
+        { user: userResponse, providerProfile, accessToken, refreshToken },
+        "Provider registered successfully"
+      )
+    );
 });
 
 export { registerCustomer, registerProvider };
