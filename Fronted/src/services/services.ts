@@ -45,6 +45,13 @@ export const servicesAPI = {
         return response.data.data;
     },
 
+
+    // Get authenticated provider services
+    getMyServices: async () => {
+        const response = await api.get('/services/me');
+        return response.data.data;
+    },
+
     // Get service by ID
     getServiceById: async (serviceId: string) => {
         const response = await api.get(`/services/${serviceId}`);
@@ -91,7 +98,7 @@ export const servicesAPI = {
         
         if (data.title) formData.append('title', data.title);
         if (data.description) formData.append('description', data.description);
-        if (data.pricing) formData.append('pricing', data.pricing.toString());
+        if (data.pricing !== undefined) formData.append('pricing', data.pricing.toString());
         if (data.categoryId) formData.append('categoryId', data.categoryId);
         if (data.locationPolicy) formData.append('locationPolicy', data.locationPolicy);
         if (data.isActive !== undefined) formData.append('isActive', data.isActive.toString());

@@ -26,6 +26,7 @@ import { QueryDetailsModal } from "./QueryDetailsModal"
 import { ViewAllQueriesModal } from "./ViewAllQueriesModal"
 import { CustomerReviewsModal } from "./CustomerReviewsModal"
 import { ManageServicesModal } from "./ManageServicesModal"
+import { ServiceManagementModal } from "./ServiceManagementModal"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts"
 import { providerAPI, ProviderDashboardData } from "../services/provider"
 
@@ -43,6 +44,8 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
   const [isQueriesModalOpen, setIsQueriesModalOpen] = useState(false)
   const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false)
   const [isManageServicesModalOpen, setIsManageServicesModalOpen] = useState(false)
+  const [isServiceManagementModalOpen, setIsServiceManagementModalOpen] = useState(false)
+  const [serviceManagementMode, setServiceManagementMode] = useState<'add' | 'select-edit'>('add')
 
   const [dashboardData, setDashboardData] = useState<ProviderDashboardData | null>(null)
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(true)
@@ -118,6 +121,39 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
   const activityData = dashboardData?.activityData || []
   const listings = dashboardData?.services || []
   const competitorData = dashboardData?.priceComparison || []
+
+  const handleServiceAdded = (newService: ProviderDashboardData["services"][number]) => {
+    setDashboardData((prev) =>
+      prev
+        ? {
+            ...prev,
+            services: [newService, ...prev.services],
+          }
+        : prev
+    )
+  }
+
+  const handleServiceUpdated = (updatedService: ProviderDashboardData["services"][number]) => {
+    setDashboardData((prev) =>
+      prev
+        ? {
+            ...prev,
+            services: prev.services.map((service) =>
+              service.id === updatedService.id
+                ? {
+                    ...service,
+                    ...updatedService,
+                    bookings: service.bookings,
+                    revenue: service.revenue,
+                    views: service.views,
+                    rating: service.rating,
+                  }
+                : service
+            ),
+          }
+        : prev
+    )
+  }
 
   return (
     <div className="min-h-screen pt-20 pb-32 px-4 md:px-8">
@@ -471,9 +507,20 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
               <h3 className="text-lg text-foreground mb-1">Your Service Listings</h3>
               <p className="text-xs text-muted-foreground">Manage and track your services</p>
             </div>
-            <button className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl transition-all text-sm">
-              Add New Service
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { setServiceManagementMode('add'); setIsServiceManagementModalOpen(true) }}
+                className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl transition-all text-sm"
+              >
+                Add New Service
+              </button>
+              <button
+                onClick={() => { setServiceManagementMode('select-edit'); setIsServiceManagementModalOpen(true) }}
+                className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl transition-all text-sm"
+              >
+                Edit
+              </button>
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -709,6 +756,14 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
           />
         )}
       </AnimatePresence>
+
+      <ServiceManagementModal
+        isOpen={isServiceManagementModalOpen}
+        initialMode={serviceManagementMode}
+        onClose={() => setIsServiceManagementModalOpen(false)}
+        onServiceAdded={handleServiceAdded}
+        onServiceUpdated={handleServiceUpdated}
+      />
     </div>
   )
 }

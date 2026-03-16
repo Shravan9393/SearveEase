@@ -52,6 +52,23 @@ const createService = asyncHandler(async (req, res) => {
     .json(new ApiResponse(StatusCodes.CREATED, { service }, "Service created successfully"));
 });
 
+const getMyServices = asyncHandler(async (req, res) => {
+  if (!req.user || req.user.role !== "provider") {
+    throw new ApiError(StatusCodes.FORBIDDEN, "Only providers can access their services");
+  }
+
+  const providerProfile = await ProviderProfile.findOne({ userId: req.user._id });
+  if (!providerProfile) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Provider profile not found");
+  }
+
+  const services = await Service.find({ providerId: providerProfile._id, isActive: true }).sort({ createdAt: -1 });
+
+  return res
+    .status(StatusCodes.OK)
+    .json(new ApiResponse(StatusCodes.OK, { services }, "Provider services fetched successfully"));
+});
+
 const getAllServices = asyncHandler(async (req, res) => {
   const { category, provider, page = 1, limit = 20, search, minPrice, maxPrice } = req.query;
   const query = { isActive: true };
@@ -186,4 +203,4 @@ const deleteService = asyncHandler(async (req, res) => {
     .json(new ApiResponse(StatusCodes.OK, null, "Service deleted successfully"));
 });
 
-export { createService, getAllServices, getServicesById, updateService, deleteService };
+export { createService, getMyServices, getAllServices, getServicesById, updateService, deleteService };

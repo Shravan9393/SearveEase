@@ -3,6 +3,7 @@ import { verifyJWT } from "../MIDDLEWARES/auth.middlewares.js";
 import { upload } from "../MIDDLEWARES/multer.middleware.js";
 import {
   createService,
+  getMyServices,
   getAllServices,
   getServicesById,
   updateService,
@@ -11,6 +12,7 @@ import {
 
 const router = Router();
 
+router.get("/me", verifyJWT, getMyServices);
 router.get("/", getAllServices);
 router.get("/:serviceId", getServicesById);
 
