@@ -401,3 +401,6 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate, onBookNow }) => {
 }
 
 export { HomePage }
+
+
+
