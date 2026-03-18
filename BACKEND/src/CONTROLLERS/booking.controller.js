@@ -17,7 +17,7 @@ const BOOKING_STATUS = [
   "completed",
   "cancelled",
 ];
-const PROVIDER_ALLOWED_STATUSES = ["confirmed", "cancelled"];
+const PROVIDER_ALLOWED_STATUSES = ["confirmed", "cancelled", "completed"];
 
 const buildBookingAddress = (address = {}) => ({
   type: address.type || "home",
@@ -44,7 +44,7 @@ const syncProviderNotificationStatus = async (bookingId, status) => {
       $set: {
         "metadata.bookingStatus": status,
         "metadata.providerAction":
-          status === "confirmed"
+          status === "confirmed" || status === "completed"
             ? "accepted"
             : status === "cancelled"
               ? "declined"
@@ -297,7 +297,14 @@ const updateBookingStatus = asyncHandler(async (req, res) => {
   if (!PROVIDER_ALLOWED_STATUSES.includes(status)) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      "Providers can only accept or decline booking requests"
+      "Providers can only confirm, cancel, or complete their own bookings"
+    );
+  }
+
+  if (status === "completed" && !["confirmed", "in-progress"].includes(booking.status)) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "Only active bookings can be marked as completed"
     );
   }
 
