@@ -28,8 +28,12 @@ import { ChatModal, ServiceProvider } from "./ChatModal"
 import { CartItem } from "../App"
 import { servicesAPI, categoriesAPI, Service as BackendService } from "../services"
 
+const getProviderProfileId = (provider: BackendService["providerId"]) =>
+  typeof provider === "string" ? provider : provider?._id || ""
+
 interface Service {
   id: string
+  providerProfileId: string
   name: string
   provider: string
   image: string
@@ -116,6 +120,7 @@ const ServicesPage: React.FC<ServicesPageProps> = ({
 
         const mappedServices: Service[] = (servicesResponse.services || []).map((service: BackendService) => ({
           id: service._id,
+          providerProfileId: getProviderProfileId(service.providerId),
           name: service.title,
           provider: service.providerName,
           image: service.images,
@@ -177,6 +182,7 @@ const ServicesPage: React.FC<ServicesPageProps> = ({
   const addToCart = (service: Service) => {
     const cartItem: Omit<CartItem, 'quantity'> = {
       id: service.id,
+      providerProfileId: service.providerProfileId,
       name: service.name,
       provider: service.provider,
       image: service.image,

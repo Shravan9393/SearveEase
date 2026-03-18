@@ -121,7 +121,7 @@ import { api } from './api';
 // Types matching backend model
 export interface Service {
     _id: string;
-    providerId: string;
+    providerId: string | { _id: string };
     providerName: string;
     providerImage?: string;
     categoryName: string;

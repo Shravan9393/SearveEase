@@ -14,11 +14,12 @@ import { ContactPage } from "./components/pages/ContactPage"
 import { ProfilePage } from "./components/pages/ProfilePage"
 import { Footer } from "./components/Footer"
 import { useAuth } from "./context/AuthContext"
-import { Service } from "./services/services"
+import { bookingsAPI } from "./services/bookings"
 
 // Cart item interface
 interface CartItem {
   id: string
+  providerProfileId: string
   name: string
   provider: string
   image: string
@@ -126,18 +127,64 @@ export default function App() {
   }, [isAuthenticated])
 
   // Handle address completion and payment
-  const handleProceedToPayment = useCallback((addressData: AddressData) => {
-    setIsAddressModalOpen(false)
+  const handleProceedToPayment = useCallback(async (addressData: AddressData) => {
+    if (!cartItems.length) {
+      alert("Your cart is empty.")
+      return
+    }
+
     const total = getCartTotal()
-    
-    // Here you would typically integrate with a payment gateway
-    console.log("Proceeding to payment with address:", addressData)
-    console.log("Cart items:", cartItems)
-    console.log("Total amount:", total)
-    
-    // For demo purposes, show a success message and clear cart
-    alert(`Payment of ₹${total} initiated! Order will be delivered to ${addressData.addressLine1}, ${addressData.city}`)
-    clearCart()
+    const bookingDate = new Date()
+    bookingDate.setDate(bookingDate.getDate() + 1)
+
+    try {
+      const bookingRequests = cartItems.flatMap((item) =>
+        Array.from({ length: item.quantity }, () =>
+          bookingsAPI.createBooking({
+            providerProfileId:
+              typeof item.providerProfileId === "string"
+                ? item.providerProfileId
+                : (item.providerProfileId as any)?._id || "",
+            serviceId: item.id,
+            date: bookingDate.toISOString(),
+            time: "To be scheduled",
+            totalAmount: item.price,
+            paymentType: addressData.cashOnDelivery ? "cod" : "online",
+            address: {
+              type: addressData.type,
+              name: addressData.name,
+              phone: addressData.phone,
+              addressLine1: addressData.addressLine1,
+              addressLine2: addressData.addressLine2,
+              city: addressData.city,
+              state: addressData.state,
+              pincode: addressData.pincode,
+              landmark: addressData.landmark,
+              instructions: addressData.instructions,
+            },
+            notes:
+              item.quantity > 1
+                ? `Cart item quantity: ${item.quantity}`
+                : undefined,
+          })
+        )
+      )
+
+      await Promise.all(bookingRequests)
+
+      setIsAddressModalOpen(false)
+      clearCart()
+      alert(
+        `Booking confirmed for ₹${total}. ${
+          addressData.cashOnDelivery
+            ? "Cash on Delivery selected."
+            : "Booking saved for future online payment."
+        }`
+      )
+    } catch (error: any) {
+      console.error("Failed to create booking", error)
+      alert(error?.response?.data?.message || "Failed to confirm booking. Please try again.")
+    }
   }, [cartItems, getCartTotal, clearCart])
 
   // Navigation handler
