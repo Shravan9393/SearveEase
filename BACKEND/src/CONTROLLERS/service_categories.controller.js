@@ -1,4 +1,3 @@
-// import ServiceCategory from "../MODELS/service_categories.js";
 import Service from "../MODELS/services.models.js";
 import Category from "../MODELS/categories.models.js";
 import {ProviderProfile} from "../MODELS/provider_profiles.models.js";

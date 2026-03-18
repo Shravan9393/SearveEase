@@ -91,8 +91,18 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate, onBookNow }) => {
   }, [onNavigate])
 
   const handleBookNowClick = useCallback((service: any) => {
+    const providerProfileId =
+      typeof (service.providerId || service.providerProfileId) === "string"
+        ? (service.providerId || service.providerProfileId)
+        : (service.providerId || service.providerProfileId)?._id || ""
+
     const cartItem: Omit<CartItem, 'quantity'> = {
       id: service._id || service.id,
+
+      providerProfileId,
+
+      providerProfileId: service.providerId || service.providerProfileId || "",
+
       name: service.title || service.name,
       provider: service.providerName || service.provider,
       image: service.images || service.image,
@@ -401,6 +411,3 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate, onBookNow }) => {
 }
 
 export { HomePage }
-
-
-

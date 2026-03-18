@@ -17,11 +17,13 @@ import {
 
 interface Notification {
   id: string
+  bookingId?: string
   customerName: string
   customerAvatar: string
   service: string
   location: string
   budget: string
+  paymentLabel?: string
   time: string
   message: string
   status?: 'pending' | 'accepted' | 'denied' | 'dismissed'
@@ -235,6 +237,14 @@ export const NotificationSidebar: React.FC<NotificationSidebarProps> = ({
                       {notification.budget}
                     </span>
                   </div>
+
+                  {notification.paymentLabel && (
+                    <div className="mb-3">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs text-primary border border-primary/20">
+                        {notification.paymentLabel}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Action Buttons */}
                   {activeTab === 'active' && (
