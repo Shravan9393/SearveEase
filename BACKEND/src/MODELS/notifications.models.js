@@ -10,8 +10,14 @@ const notificationSchema = new mongoose.Schema(
 
         type:{
             type: String,
-            enum: ["message", "payment", "other"],
+            enum: ["message", "payment", "booking_request", "other"],
             required: true
+        },
+
+        bookingId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Booking",
+            default: null,
         },
 
         title: {
@@ -22,6 +28,11 @@ const notificationSchema = new mongoose.Schema(
         body:{
             type: String,
             required: true
+        },
+
+        metadata: {
+            type: mongoose.Schema.Types.Mixed,
+            default: {},
         },
         
         isRead: {
