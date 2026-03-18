@@ -301,6 +301,7 @@ const getProviderDashboard = asyncHandler(async (req, res) => {
       verified: profile.verified,
       category: services[0]?.categoryName || "",
       userName: profile.userId?.fullName,
+      currency: profile.pricing?.currency || "₹",
     },
     stats,
     revenueData,
