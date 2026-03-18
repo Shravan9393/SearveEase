@@ -2162,13 +2162,30 @@ import {
   ResponsiveContainer, Area, AreaChart,
 } from "recharts"
 import { providerAPI, ProviderDashboardData } from "../services/provider"
+import { bookingsAPI } from "../services/bookings"
+import { AppNotification, notificationsAPI } from "../services/notifications"
 
 interface ProviderHomePageProps {
   user: any
 }
 
+interface ProviderNotification {
+  id: string
+  bookingId?: string
+  customerName: string
+  customerAvatar: string
+  service: string
+  location: string
+  budget: string
+  paymentLabel?: string
+  time: string
+  message: string
+  status?: "pending" | "accepted" | "denied" | "dismissed"
+  timestamp?: Date
+}
+
 export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
-  const [notifications, setNotifications] = useState<any[]>([])
+  const [notifications, setNotifications] = useState<ProviderNotification[]>([])
   const [showAllListings, setShowAllListings] = useState(false)
   const [selectedQuery, setSelectedQuery] = useState<any>(null)
   const [isQueryModalOpen, setIsQueryModalOpen] = useState(false)
@@ -2192,55 +2209,102 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
   const [dashboardData, setDashboardData] = useState<ProviderDashboardData | null>(null)
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(true)
 
-  // FIX: Empty deps array — load once on mount (no stale location deps)
+  const mapNotificationToCard = (notification: AppNotification): ProviderNotification => {
+    const metadata = notification.metadata || {}
+    const providerAction = metadata.providerAction
+    const status =
+      providerAction === "accepted"
+        ? "accepted"
+        : providerAction === "declined"
+        ? "denied"
+        : "pending"
+
+    return {
+      id: notification._id,
+      bookingId: notification.bookingId,
+      customerName: metadata.customer?.name || "Customer",
+      customerAvatar:
+        metadata.customer?.avatar ||
+        "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg",
+      service: metadata.service?.title || notification.title,
+      location: metadata.addressSummary || "Customer address pending",
+      budget:
+        metadata.totalAmount !== undefined
+          ? `₹${metadata.totalAmount}`
+          : "Check booking details",
+      paymentLabel:
+        metadata.paymentType === "cod"
+          ? "Cash on Delivery"
+          : metadata.paymentStatus === "paid"
+          ? "Already Paid"
+          : "Online Payment Pending",
+      time: new Date(notification.createdAt).toLocaleString(),
+      message: notification.body,
+      status,
+      timestamp: new Date(notification.createdAt),
+    }
+  }
+
   useEffect(() => {
-    const loadDashboard = async () => {
+    const loadProviderHome = async () => {
       try {
         setIsLoadingDashboard(true)
-        const data = await providerAPI.getProviderDashboard()
+        const [data, notificationData] = await Promise.all([
+          providerAPI.getProviderDashboard(),
+          notificationsAPI.getNotifications({ limit: 50 }),
+        ])
         setDashboardData(data)
 
-        const pendingNotifications = data.activityData
-          .map((entry, index) => ({
-            id: `${index + 1}`,
-            customerName: "New Customer",
-            customerAvatar:
-              "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-            service: data.provider.category || "Service Request",
-            location: user.location?.city
-              ? `${user.location.city}, ${user.location?.state || ""}`
-              : "Your service area",
-            budget: "Check booking details",
-            time: `${entry.day}`,
-            message: `You received ${entry.queries} new queries`,
-            status: "pending" as const,
-          }))
-          .filter(
-            (entry) => Number(entry.message.match(/\d+/)?.[0] || 0) > 0
-          )
+        const bookingNotifications = (notificationData.notifications || [])
+          .filter((notification) => notification.type === "booking_request")
+          .map(mapNotificationToCard)
 
-        setNotifications(pendingNotifications)
+        setNotifications(bookingNotifications)
       } catch (error) {
         console.error("Failed to load provider dashboard", error)
       } finally {
         setIsLoadingDashboard(false)
       }
     }
-    loadDashboard()
+    loadProviderHome()
   }, [])
 
-  const handleAcceptNotification = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, status: "accepted" as const } : n))
-    )
+  const handleAcceptNotification = async (id: string) => {
+    const notification = notifications.find((item) => item.id === id)
+    if (!notification?.bookingId) return
+
+    try {
+      await bookingsAPI.updateBookingStatus(notification.bookingId, "confirmed")
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, status: "accepted" as const } : n))
+      )
+    } catch (error) {
+      console.error("Failed to accept booking request", error)
+      alert("Failed to accept booking request. Please try again.")
+    }
   }
-  const handleDenyNotification = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, status: "denied" as const } : n))
-    )
+  const handleDenyNotification = async (id: string) => {
+    const notification = notifications.find((item) => item.id === id)
+    if (!notification?.bookingId) return
+
+    try {
+      await bookingsAPI.updateBookingStatus(notification.bookingId, "cancelled")
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, status: "denied" as const } : n))
+      )
+    } catch (error) {
+      console.error("Failed to decline booking request", error)
+      alert("Failed to decline booking request. Please try again.")
+    }
   }
-  const handleDismissNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id))
+  const handleDismissNotification = async (id: string) => {
+    try {
+      await notificationsAPI.deleteNotification(id)
+    } catch (error) {
+      console.error("Failed to delete notification", error)
+    } finally {
+      setNotifications((prev) => prev.filter((n) => n.id !== id))
+    }
   }
 
   const stats = dashboardData?.stats || {

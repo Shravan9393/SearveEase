@@ -6,6 +6,7 @@ import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Textarea } from "./ui/textarea"
+import { Checkbox } from "./ui/checkbox"
 
 interface AddressModalProps {
   isOpen: boolean
@@ -26,6 +27,7 @@ interface AddressData {
   landmark?: string
   instructions?: string
   useCurrentLocation?: boolean
+  cashOnDelivery?: boolean
 }
 
 const AddressModal: React.FC<AddressModalProps> = ({ 
@@ -45,7 +47,8 @@ const AddressModal: React.FC<AddressModalProps> = ({
     pincode: '',
     landmark: '',
     instructions: '',
-    useCurrentLocation: false
+    useCurrentLocation: false,
+    cashOnDelivery: false
   })
   const [isLoading, setIsLoading] = useState(false)
   const [locationError, setLocationError] = useState('')
@@ -328,6 +331,26 @@ const AddressModal: React.FC<AddressModalProps> = ({
                   </div>
                 </div>
 
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold block">Payment Type</Label>
+                  <div className="flex items-start gap-3 rounded-2xl modal-internal-glass border border-white/20 dark:border-white/15 px-4 py-4">
+                    <Checkbox
+                      id="cashOnDelivery"
+                      checked={formData.cashOnDelivery}
+                      onCheckedChange={(checked) => handleInputChange('cashOnDelivery', checked === true)}
+                      className="mt-1"
+                    />
+                    <div>
+                      <Label htmlFor="cashOnDelivery" className="text-sm font-medium cursor-pointer">
+                        Cash on Delivery
+                      </Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Optional. Leave unchecked to keep this booking ready for a future online payment flow.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Order Summary - Enhanced for dark mode */}
                 <div className="modal-internal-glass rounded-2xl p-6 bg-gradient-to-r from-primary/10 via-sage-100/10 to-primary/5 dark:from-primary/5 dark:via-sage-100/5 dark:to-primary/3 border border-primary/20 dark:border-primary/15">
                   <div className="flex items-center justify-between">
@@ -350,7 +373,7 @@ const AddressModal: React.FC<AddressModalProps> = ({
                   disabled={!isFormValid()}
                   className="w-full bg-gradient-to-r from-primary to-sage-700 hover:from-sage-700 hover:to-primary h-14 text-lg font-semibold rounded-2xl transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg"
                 >
-                  Pay Now - ₹{cartTotal}
+                  Confirm Booking - ₹{cartTotal}
                 </Button>
               </form>
             </div>
