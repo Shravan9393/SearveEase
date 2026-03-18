@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import {
   TrendingUp, Eye, CheckCircle2, DollarSign, Star,
@@ -17,7 +17,7 @@ import {
   ResponsiveContainer, Area, AreaChart,
 } from "recharts"
 import { providerAPI, ProviderDashboardData } from "../services/provider"
-import { bookingsAPI } from "../services/bookings"
+import { Booking, bookingsAPI } from "../services/bookings"
 import { AppNotification, notificationsAPI } from "../services/notifications"
 
 interface ProviderHomePageProps {
@@ -62,7 +62,10 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
   }
 
   const [dashboardData, setDashboardData] = useState<ProviderDashboardData | null>(null)
+  const [providerBookings, setProviderBookings] = useState<Booking[]>([])
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(true)
+  const [isLoadingBookings, setIsLoadingBookings] = useState(true)
+  const [bookingActionId, setBookingActionId] = useState<string | null>(null)
 
   const mapNotificationToCard = (notification: AppNotification): ProviderNotification => {
     const metadata = notification.metadata || {}
@@ -100,29 +103,56 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
     }
   }
 
+  const loadDashboardData = useCallback(async () => {
+    setIsLoadingDashboard(true)
+    try {
+      const data = await providerAPI.getProviderDashboard()
+      setDashboardData(data)
+    } catch (error) {
+      console.error("Failed to load provider dashboard", error)
+      throw error
+    } finally {
+      setIsLoadingDashboard(false)
+    }
+  }, [])
+
+  const loadProviderBookings = useCallback(async () => {
+    setIsLoadingBookings(true)
+    try {
+      const data = await bookingsAPI.getBookings({ page: 1, limit: 1000 })
+      setProviderBookings(data.bookings || [])
+    } catch (error) {
+      console.error("Failed to load provider bookings", error)
+      throw error
+    } finally {
+      setIsLoadingBookings(false)
+    }
+  }, [])
+
+  const loadNotifications = useCallback(async () => {
+    const notificationData = await notificationsAPI.getNotifications({ limit: 50 })
+
+    const bookingNotifications = (notificationData.notifications || [])
+      .filter((notification) => notification.type === "booking_request")
+      .map(mapNotificationToCard)
+
+    setNotifications(bookingNotifications)
+  }, [])
+
+  const refreshProviderData = useCallback(async () => {
+    await Promise.all([loadDashboardData(), loadProviderBookings()])
+  }, [loadDashboardData, loadProviderBookings])
+
   useEffect(() => {
     const loadProviderHome = async () => {
       try {
-        setIsLoadingDashboard(true)
-        const [data, notificationData] = await Promise.all([
-          providerAPI.getProviderDashboard(),
-          notificationsAPI.getNotifications({ limit: 50 }),
-        ])
-        setDashboardData(data)
-
-        const bookingNotifications = (notificationData.notifications || [])
-          .filter((notification) => notification.type === "booking_request")
-          .map(mapNotificationToCard)
-
-        setNotifications(bookingNotifications)
+        await Promise.all([loadDashboardData(), loadProviderBookings(), loadNotifications()])
       } catch (error) {
-        console.error("Failed to load provider dashboard", error)
-      } finally {
-        setIsLoadingDashboard(false)
+        console.error("Failed to load provider home", error)
       }
     }
     loadProviderHome()
-  }, [])
+  }, [loadDashboardData, loadProviderBookings, loadNotifications])
 
   const handleAcceptNotification = async (id: string) => {
     const notification = notifications.find((item) => item.id === id)
@@ -133,6 +163,7 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, status: "accepted" as const } : n))
       )
+      await refreshProviderData()
     } catch (error) {
       console.error("Failed to accept booking request", error)
       alert("Failed to accept booking request. Please try again.")
@@ -147,6 +178,7 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, status: "denied" as const } : n))
       )
+      await refreshProviderData()
     } catch (error) {
       console.error("Failed to decline booking request", error)
       alert("Failed to decline booking request. Please try again.")
@@ -198,6 +230,25 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
     )
   }
 
+
+  const handleCompleteBooking = async (bookingId: string) => {
+    try {
+      setBookingActionId(bookingId)
+      await bookingsAPI.updateBookingStatus(bookingId, "completed")
+      setProviderBookings((prev) =>
+        prev.map((booking) =>
+          booking._id === bookingId ? { ...booking, status: "completed", updatedAt: new Date().toISOString() } : booking
+        )
+      )
+      await refreshProviderData()
+    } catch (error) {
+      console.error("Failed to complete booking", error)
+      alert("Failed to complete booking. Please try again.")
+    } finally {
+      setBookingActionId(null)
+    }
+  }
+
   return (
     <div className="min-h-screen pt-20 pb-32 px-4 md:px-8">
       <NotificationSidebar
@@ -213,7 +264,7 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
         transition={{ duration: 0.3 }}
         className="max-w-7xl mx-auto space-y-6"
       >
-        {isLoadingDashboard && (
+        {(isLoadingDashboard || isLoadingBookings) && (
           <div className="text-sm text-muted-foreground">
             Loading dashboard data...
           </div>
@@ -298,7 +349,7 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             whileHover={{ scale: 1.02 }}
-            className="glass-card p-5 rounded-2xl border border-primary/30 relative overflow-hidden group cursor-pointer"
+            className="glass-card p-5 rounded-2xl border border-primary/30 relative overflow-hidden group"
             style={{ boxShadow: "0 0 20px rgba(88,129,87,.3),inset 0 0 15px rgba(88,129,87,.05)" }}
           >
             <div className="absolute inset-0 bg-gradient-to-br from-sage-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -656,7 +707,16 @@ export const ProviderHomePage: React.FC<ProviderHomePageProps> = ({ user }) => {
 
       <AnimatePresence>
         {detailModalType && (
-          <StatsDetailModal isOpen={!!detailModalType} onClose={() => setDetailModalType(null)} type={detailModalType} />
+          <StatsDetailModal
+            isOpen={!!detailModalType}
+            onClose={() => setDetailModalType(null)}
+            type={detailModalType}
+            bookings={providerBookings}
+            currencySymbol={dashboardData?.provider?.currency || "₹"}
+            isUpdatingBooking={bookingActionId !== null}
+            bookingActionId={bookingActionId}
+            onCompleteBooking={handleCompleteBooking}
+          />
         )}
       </AnimatePresence>
 
