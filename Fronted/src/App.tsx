@@ -141,10 +141,14 @@ export default function App() {
       const bookingRequests = cartItems.flatMap((item) =>
         Array.from({ length: item.quantity }, () =>
           bookingsAPI.createBooking({
+
             providerProfileId:
               typeof item.providerProfileId === "string"
                 ? item.providerProfileId
                 : (item.providerProfileId as any)?._id || "",
+
+            providerProfileId: item.providerProfileId,
+
             serviceId: item.id,
             date: bookingDate.toISOString(),
             time: "To be scheduled",

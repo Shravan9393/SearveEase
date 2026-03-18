@@ -120,7 +120,11 @@ const ServicesPage: React.FC<ServicesPageProps> = ({
 
         const mappedServices: Service[] = (servicesResponse.services || []).map((service: BackendService) => ({
           id: service._id,
+
           providerProfileId: getProviderProfileId(service.providerId),
+
+          providerProfileId: service.providerId,
+
           name: service.title,
           provider: service.providerName,
           image: service.images,

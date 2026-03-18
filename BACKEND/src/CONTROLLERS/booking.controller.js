@@ -60,12 +60,16 @@ const CreateBooking = asyncHandler(async (req, res) => {
     paymentType = "online",
   } = req.body;
 
+
   const normalizedProviderProfileId =
     typeof providerProfileId === "string" ? providerProfileId : providerProfileId?._id;
   const normalizedServiceId =
     typeof serviceId === "string" ? serviceId : serviceId?._id;
 
   if (!normalizedProviderProfileId || !normalizedServiceId || !date || !time || totalAmount === undefined) {
+
+  if (!providerProfileId || !serviceId || !date || !time || totalAmount === undefined) {
+
     throw new ApiError(StatusCodes.BAD_REQUEST, "All fields are required");
   }
 
@@ -81,14 +85,22 @@ const CreateBooking = asyncHandler(async (req, res) => {
   if (!customerProfile) throw new ApiError(StatusCodes.BAD_REQUEST, "Customer profile not found");
 
   const [providerProfile, service, customerUser] = await Promise.all([
+
     ProviderProfile.findById(normalizedProviderProfileId),
     Service.findById(normalizedServiceId),
+
+    ProviderProfile.findById(providerProfileId),
+    Service.findById(serviceId),
     User.findById(req.user._id),
   ]);
 
   if (!providerProfile) throw new ApiError(StatusCodes.BAD_REQUEST, "Provider profile not found");
 
+
   if (!service || service.providerId.toString() !== normalizedProviderProfileId) {
+
+  if (!service || service.providerId.toString() !== providerProfileId) {
+
     throw new ApiError(StatusCodes.BAD_REQUEST, "Service does not belong to provider");
   }
 
@@ -228,10 +240,19 @@ const updateBookingStatus = asyncHandler(async (req, res) => {
   await booking.save();
   await syncProviderNotificationStatus(booking._id, status);
 
+
   const populatedBooking = await Booking.findById(booking._id)
     .populate("customerProfileId", "fullName phone profileImage")
     .populate("providerProfileId", "displayName phone")
     .populate("serviceId", "title pricing");
+
+
+
+  const populatedBooking = await Booking.findById(booking._id)
+    .populate("customerProfileId", "fullName phone profileImage")
+    .populate("providerProfileId", "displayName phone")
+    .populate("serviceId", "title pricing");
+
 
   return new ApiResponse(res).success({ booking: populatedBooking }, "Booking status updated successfully");
 });

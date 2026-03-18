@@ -98,7 +98,11 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate, onBookNow }) => {
 
     const cartItem: Omit<CartItem, 'quantity'> = {
       id: service._id || service.id,
+
       providerProfileId,
+
+      providerProfileId: service.providerId || service.providerProfileId || "",
+
       name: service.title || service.name,
       provider: service.providerName || service.provider,
       image: service.images || service.image,
