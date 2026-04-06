@@ -1,21 +1,13 @@
-import React, { useState, useRef, useEffect } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
-import { X, Send, Phone, Video, MoreHorizontal, Star, MapPin, Clock } from "lucide-react"
-import { GlassCard } from "./ui/glass-card"
+import { X, Send, MessageCircle } from "lucide-react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
-import { ImageWithFallback } from "./figma/ImageWithFallback"
-
-interface Message {
-  id: string
-  sender: 'user' | 'provider'
-  message: string
-  timestamp: Date
-  type: 'text' | 'quote' | 'booking'
-}
+import { queriesAPI, ServiceQuery } from "../services/queries"
 
 interface ServiceProvider {
   id: string
+  profileId: string
   name: string
   image: string
   rating: number
@@ -30,144 +22,71 @@ interface ChatModalProps {
   isOpen: boolean
   onClose: () => void
   provider: ServiceProvider
-  onBookService?: (providerId: string, price: number) => void
+  customerId?: string
 }
 
-const ChatModal: React.FC<ChatModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  provider,
-  onBookService 
-}) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      sender: 'provider',
-      message: `Hi! I'm ${provider.name}. How can I help you with ${provider.serviceName}?`,
-      timestamp: new Date(Date.now() - 300000),
-      type: 'text'
-    },
-    {
-      id: '2',
-      sender: 'provider',
-      message: `I'm available right now and can start within ${provider.responseTime}. Would you like a custom quote?`,
-      timestamp: new Date(Date.now() - 240000),
-      type: 'text'
-    }
-  ])
-  const [newMessage, setNewMessage] = useState('')
-  const [isTyping, setIsTyping] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, provider, customerId }) => {
+  const [queries, setQueries] = useState<ServiceQuery[]>([])
+  const [message, setMessage] = useState("")
+  const [isSending, setIsSending] = useState(false)
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  const loadQueries = async () => {
+    try {
+      const data = await queriesAPI.getCustomerQueries()
+      const filtered = (data.queries || []).filter(
+        (query) => query.serviceId?._id === provider.id && query.providerProfileId?._id === provider.profileId
+      )
+      setQueries(filtered)
+    } catch (error) {
+      console.error("Failed to fetch customer queries", error)
+      setQueries([])
+    }
   }
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    if (!isOpen) return
+    loadQueries()
+  }, [isOpen])
 
-  const sendMessage = () => {
-    if (!newMessage.trim()) return
+  const allMessages = useMemo(
+    () =>
+      queries
+        .flatMap((query) =>
+          (query.messages || []).map((item) => ({ ...item, queryId: query._id, status: query.status }))
+        )
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+    [queries]
+  )
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      sender: 'user',
-      message: newMessage,
-      timestamp: new Date(),
-      type: 'text'
+  const handleSendQuery = async () => {
+    if (!message.trim()) return
+    if (!customerId) {
+      alert("Please log in as a customer to send a query.")
+      return
     }
 
-    setMessages(prev => [...prev, userMessage])
-    setNewMessage('')
-    setIsTyping(true)
-
-    // Simulate provider response
-    setTimeout(() => {
-      const responses = [
-        "I understand your requirements. Let me prepare a detailed quote for you.",
-        "That sounds great! I have availability this week. When would work best for you?",
-        "I can definitely help with that. My rate for this service is competitive.",
-        "Perfect! I'll bring all necessary equipment. Do you have any specific preferences?",
-        "I have 5+ years of experience with this type of work. I guarantee quality results."
-      ]
-
-      const providerMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        sender: 'provider',
-        message: responses[Math.floor(Math.random() * responses.length)],
-        timestamp: new Date(),
-        type: 'text'
-      }
-
-      setMessages(prev => [...prev, providerMessage])
-      setIsTyping(false)
-
-      // Sometimes send a quote
-      if (Math.random() > 0.6) {
-        setTimeout(() => {
-          const quoteMessage: Message = {
-            id: (Date.now() + 2).toString(),
-            sender: 'provider',
-            message: `Custom Quote: ₹${provider.basePrice + Math.floor(Math.random() * 200)} (includes materials and labor)`,
-            timestamp: new Date(),
-            type: 'quote'
-          }
-          setMessages(prev => [...prev, quoteMessage])
-        }, 2000)
-      }
-    }, 1500 + Math.random() * 2000)
-  }
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
+    setIsSending(true)
+    try {
+      await queriesAPI.createQuery({
+        serviceId: provider.id,
+        providerId: provider.profileId,
+        customerId,
+        message: message.trim(),
+      })
+      setMessage("")
+      await loadQueries()
+    } catch (error: any) {
+      console.error("Failed to send query", error)
+      alert(error?.response?.data?.message || "Failed to send query")
+    } finally {
+      setIsSending(false)
     }
   }
-
-  const sendQuickReply = (reply: string) => {
-    setNewMessage(reply)
-    setTimeout(() => sendMessage(), 100)
-  }
-
-  const handleBookService = () => {
-    const bookingMessage: Message = {
-      id: Date.now().toString(),
-      sender: 'user',
-      message: "I'd like to book this service. Can we proceed?",
-      timestamp: new Date(),
-      type: 'booking'
-    }
-    setMessages(prev => [...prev, bookingMessage])
-    
-    setTimeout(() => {
-      const confirmMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        sender: 'provider',
-        message: "Great! I'll confirm the booking details and send you the payment link.",
-        timestamp: new Date(),
-        type: 'text'
-      }
-      setMessages(prev => [...prev, confirmMessage])
-      
-      // Call the booking function if provided
-      onBookService?.(provider.id, provider.basePrice)
-    }, 1000)
-  }
-
-  const quickReplies = [
-    "What's your pricing?",
-    "When are you available?",
-    "Do you provide materials?",
-    "How long will it take?"
-  ]
 
   return (
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Enhanced Backdrop - Much darker */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -176,168 +95,62 @@ const ChatModal: React.FC<ChatModalProps> = ({
             onClick={onClose}
           />
 
-          {/* Enhanced Chat Modal - Much darker in dark mode */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 30 }}
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 30 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="relative w-full max-w-lg h-[600px] max-h-[80vh] overflow-hidden"
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="relative w-full max-w-2xl h-[600px] max-h-[85vh] overflow-hidden"
           >
             <div className="modal-glass rounded-3xl h-full flex flex-col shadow-2xl">
-              {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-white/10 dark:border-white/20">
-                <div className="flex items-center space-x-4">
-                  <div className="relative">
-                    <ImageWithFallback
-                      src={provider.image}
-                      alt={provider.name}
-                      className="w-12 h-12 rounded-2xl object-cover ring-2 ring-white/20"
-                    />
-                    {provider.isOnline && (
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full animate-pulse" />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold">{provider.name}</h3>
-                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                      <Star size={12} className="text-yellow-500 fill-current" />
-                      <span>{provider.rating}</span>
-                      <span>({provider.reviewCount})</span>
-                      <span>•</span>
-                      <span className={provider.isOnline ? "text-green-500" : "text-muted-foreground"}>
-                        {provider.isOnline ? 'Online' : `Responds in ${provider.responseTime}`}
-                      </span>
+              <div className="flex items-center justify-between p-5 border-b border-white/15">
+                <div>
+                  <h3 className="text-lg font-semibold">Query {provider.name}</h3>
+                  <p className="text-sm text-muted-foreground">{provider.serviceName}</p>
+                </div>
+                <Button variant="ghost" size="icon" onClick={onClose} className="rounded-xl">
+                  <X size={18} />
+                </Button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {allMessages.length === 0 && (
+                  <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                    <div className="text-center">
+                      <MessageCircle className="mx-auto mb-2" size={24} />
+                      No queries yet. Start by sending a message.
                     </div>
                   </div>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Button variant="ghost" size="icon" className="rounded-2xl modal-internal-glass w-10 h-10 hover:bg-white/15 dark:hover:bg-white/20">
-                    <Phone size={18} />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="rounded-2xl modal-internal-glass w-10 h-10 hover:bg-white/15 dark:hover:bg-white/20">
-                    <Video size={18} />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="rounded-2xl modal-internal-glass w-10 h-10 hover:bg-white/15 dark:hover:bg-white/20">
-                    <MoreHorizontal size={18} />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={onClose}
-                    className="rounded-2xl modal-internal-glass w-10 h-10 hover:bg-white/15 dark:hover:bg-white/20 ml-2"
-                  >
-                    <X size={18} />
-                  </Button>
-                </div>
-              </div>
+                )}
 
-              {/* Service Info */}
-              <div className="p-4 bg-gradient-to-r from-primary/10 via-sage-100/10 to-primary/5 dark:from-primary/5 dark:via-sage-100/5 dark:to-primary/3 border-b border-white/10 dark:border-white/20">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground font-medium">Service:</span>
-                  <span className="font-semibold">{provider.serviceName}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm mt-2">
-                  <span className="text-muted-foreground font-medium">Starting from:</span>
-                  <span className="text-lg font-bold text-primary">₹{provider.basePrice}</span>
-                </div>
-              </div>
-
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.map((message) => (
-                  <motion.div
-                    key={message.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
+                {allMessages.map((item) => (
+                  <div key={item._id} className={`flex ${item.senderType === "customer" ? "justify-end" : "justify-start"}`}>
                     <div
-                      className={`max-w-[80%] p-4 rounded-2xl ${
-                        message.sender === 'user'
-                          ? 'bg-gradient-to-r from-primary to-sage-700 text-primary-foreground shadow-lg'
-                          : message.type === 'quote'
-                          ? 'modal-internal-glass bg-gradient-to-r from-orange-100/50 to-yellow-100/50 dark:from-orange-900/20 dark:to-yellow-900/20 border border-orange-200/50 dark:border-orange-800/30'
-                          : 'modal-internal-glass'
+                      className={`max-w-[80%] p-3 rounded-2xl text-sm ${
+                        item.senderType === "customer"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted/30 border border-primary/20"
                       }`}
                     >
-                      <p className="text-sm leading-relaxed">{message.message}</p>
-                      <div className="flex items-center justify-between mt-3">
-                        <span className="text-xs opacity-70">
-                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        {message.type === 'quote' && message.sender === 'provider' && (
-                          <Button 
-                            size="sm" 
-                            onClick={handleBookService}
-                            className="h-8 text-xs px-3 bg-gradient-to-r from-primary to-sage-700 hover:from-sage-700 hover:to-primary rounded-xl"
-                          >
-                            Book Now
-                          </Button>
-                        )}
-                      </div>
+                      <p>{item.message}</p>
+                      <p className="text-[10px] opacity-70 mt-1">
+                        {new Date(item.createdAt).toLocaleString()}
+                      </p>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
-                
-                {/* Typing Indicator */}
-                {isTyping && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex justify-start"
-                  >
-                    <div className="modal-internal-glass p-4 rounded-2xl">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" />
-                        <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                        <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-                
-                <div ref={messagesEndRef} />
               </div>
 
-              {/* Quick Replies */}
-              <div className="px-4 py-3 border-t border-white/10 dark:border-white/20">
-                <div className="flex flex-wrap gap-2">
-                  {quickReplies.map((reply, index) => (
-                    <Button
-                      key={index}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => sendQuickReply(reply)}
-                      className="text-xs h-8 rounded-2xl modal-internal-glass border-white/20 dark:border-white/15 hover:bg-white/15 dark:hover:bg-white/20"
-                    >
-                      {reply}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Message Input */}
-              <div className="p-4 border-t border-white/10 dark:border-white/20">
-                <div className="flex items-center space-x-3">
-                  <Input
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Type a message..."
-                    className="flex-1 h-12 rounded-2xl modal-internal-glass border-white/20 dark:border-white/15 focus:border-primary/50 dark:focus:border-primary/60 transition-all duration-200"
-                  />
-                  <Button
-                    onClick={sendMessage}
-                    disabled={!newMessage.trim()}
-                    className="rounded-2xl bg-gradient-to-r from-primary to-sage-700 hover:from-sage-700 hover:to-primary w-12 h-12 shadow-lg disabled:opacity-50"
-                    size="icon"
-                  >
-                    <Send size={18} />
-                  </Button>
-                </div>
+              <div className="p-4 border-t border-white/15 flex gap-2">
+                <Input
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Write your query message..."
+                  className="h-11"
+                />
+                <Button onClick={handleSendQuery} disabled={isSending || !message.trim()} className="h-11">
+                  <Send size={16} className="mr-1" />
+                  {isSending ? "Sending" : "Send"}
+                </Button>
               </div>
             </div>
           </motion.div>
