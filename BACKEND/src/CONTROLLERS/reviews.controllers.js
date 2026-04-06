@@ -140,8 +140,42 @@ const getProviderReviews = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.NOT_FOUND, "Provider profile not found");
   }
 
-  req.query.providerId = providerProfile._id.toString();
-  return getReviews(req, res);
+  const { page = 1, limit = 10 } = req.query;
+  const parsedPage = Number(page);
+  const parsedLimit = Number(limit);
+
+  const providerServices = await Service.find({ providerId: providerProfile._id }).select("_id");
+  const providerServiceIds = providerServices.map((service) => service._id);
+  const providerBookings = await Booking.find({ serviceId: { $in: providerServiceIds } }).select("_id");
+  const providerBookingIds = providerBookings.map((booking) => booking._id);
+
+  const reviews = await Review.find({
+    $or: [{ providerProfileId: providerProfile._id }, { bookingId: { $in: providerBookingIds } }],
+  })
+    .populate("customerProfileId", "fullName profileImage")
+    .populate({ path: "bookingId", select: "serviceId", populate: { path: "serviceId", select: "title" } })
+    .sort({ createdAt: -1 })
+    .limit(parsedLimit)
+    .skip((parsedPage - 1) * parsedLimit);
+
+  const total = await Review.countDocuments({
+    $or: [{ providerProfileId: providerProfile._id }, { bookingId: { $in: providerBookingIds } }],
+  });
+
+  return res.status(StatusCodes.OK).json(
+    new ApiResponse(
+      StatusCodes.OK,
+      {
+        reviews,
+        pagination: {
+          currentPage: parsedPage,
+          totalPages: Math.ceil(total / parsedLimit),
+          totalReviews: total,
+        },
+      },
+      "Provider reviews retrieved successfully"
+    )
+  );
 });
 
 const getServiceReviews = asyncHandler(async (req, res) => {

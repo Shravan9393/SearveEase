@@ -195,4 +195,70 @@ const replyToQuery = asyncHandler(async (req, res) => {
     .json(new ApiResponse(StatusCodes.OK, populated, "Reply sent successfully"));
 });
 
-export { createQuery, getProviderQueries, getCustomerQueries, replyToQuery };
+const replyToCustomerQuery = asyncHandler(async (req, res) => {
+  const { queryId } = req.params;
+  const { message } = req.body;
+
+  if (!message?.trim()) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Reply message is required");
+  }
+
+  const user = await User.findById(req.user._id);
+  if (!user || user.role !== "customer") {
+    throw new ApiError(StatusCodes.FORBIDDEN, "Only customers can send follow-up messages");
+  }
+
+  const customerProfile = await CustomerProfile.findOne({ userId: req.user._id });
+  if (!customerProfile) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "Customer profile not found");
+  }
+
+  const query = await Query.findById(queryId)
+    .populate("serviceId", "title")
+    .populate("customerProfileId", "fullName userId profileImage")
+    .populate("providerProfileId", "displayName userId");
+
+  if (!query) throw new ApiError(StatusCodes.NOT_FOUND, "Query not found");
+
+  if (query.customerProfileId._id.toString() !== customerProfile._id.toString()) {
+    throw new ApiError(StatusCodes.FORBIDDEN, "You can only send messages in your own queries");
+  }
+
+  query.messages.push({
+    senderType: "customer",
+    senderId: req.user._id,
+    message: message.trim(),
+  });
+  query.status = "open";
+  query.lastMessageAt = new Date();
+  await query.save();
+
+  if (query.providerProfileId?.userId) {
+    await Notification.create({
+      userId: query.providerProfileId.userId,
+      type: "message",
+      title: "Customer sent a follow-up message",
+      body: `${query.customerProfileId.fullName || "Customer"} sent a new message about ${query.serviceId?.title || "a service query"}`,
+      metadata: {
+        queryId: query._id,
+        service: query.serviceId,
+        customer: {
+          name: query.customerProfileId.fullName || "Customer",
+          avatar: query.customerProfileId.profileImage || "",
+        },
+      },
+    });
+  }
+
+  const populated = await Query.findById(query._id)
+    .populate("serviceId", "title")
+    .populate("providerProfileId", "displayName profileImage")
+    .populate("customerProfileId", "fullName profileImage")
+    .populate("messages.senderId", "fullName profileImage role");
+
+  return res
+    .status(StatusCodes.OK)
+    .json(new ApiResponse(StatusCodes.OK, populated, "Message sent successfully"));
+});
+
+export { createQuery, getProviderQueries, getCustomerQueries, replyToQuery, replyToCustomerQuery };

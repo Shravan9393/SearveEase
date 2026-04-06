@@ -32,6 +32,12 @@ export const ViewAllQueriesModal: React.FC<ViewAllQueriesModalProps> = ({ isOpen
     loadQueries()
   }, [isOpen])
 
+  useEffect(() => {
+    if (!isOpen) return
+    const intervalId = window.setInterval(loadQueries, 8000)
+    return () => window.clearInterval(intervalId)
+  }, [isOpen])
+
   const filteredQueries = useMemo(() => {
     const keyword = searchTerm.toLowerCase()
     return queries.filter((query) => {
@@ -45,6 +51,12 @@ export const ViewAllQueriesModal: React.FC<ViewAllQueriesModalProps> = ({ isOpen
 
   const groupedLabel = (query: ServiceQuery) =>
     `${query.serviceId?.title || "Service"} • ${query.customerProfileId?.fullName || "Customer"}`
+
+  const getLastMessagePreview = (query: ServiceQuery) => {
+    const lastMessage = query.messages?.[query.messages.length - 1]
+    if (!lastMessage?.message) return "No messages yet"
+    return lastMessage.message.length > 70 ? `${lastMessage.message.slice(0, 70)}...` : lastMessage.message
+  }
 
   const handleReply = async () => {
     if (!selectedQuery || !replyMessage.trim()) return
@@ -91,6 +103,7 @@ export const ViewAllQueriesModal: React.FC<ViewAllQueriesModalProps> = ({ isOpen
                       className={`w-full text-left p-3 rounded-xl border ${selectedQueryId === query._id ? "border-primary/50 bg-primary/10" : "border-primary/20"}`}
                     >
                       <p className="text-sm text-foreground">{groupedLabel(query)}</p>
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{getLastMessagePreview(query)}</p>
                       <p className="text-xs text-muted-foreground mt-1">{new Date(query.lastMessageAt).toLocaleString()}</p>
                     </button>
                   ))}

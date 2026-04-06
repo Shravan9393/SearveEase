@@ -45,6 +45,11 @@ export const queriesAPI = {
     const response = await api.post(`/queries/${queryId}/reply`, { message });
     return response.data.data as ServiceQuery;
   },
+
+  replyToCustomerQuery: async (queryId: string, message: string) => {
+    const response = await api.post(`/queries/${queryId}/customer-reply`, { message });
+    return response.data.data as ServiceQuery;
+  },
 };
 
 export default queriesAPI;

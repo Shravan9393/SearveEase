@@ -48,6 +48,12 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, provider, custom
     loadQueries()
   }, [isOpen])
 
+  useEffect(() => {
+    if (!isOpen) return
+    const intervalId = window.setInterval(loadQueries, 8000)
+    return () => window.clearInterval(intervalId)
+  }, [isOpen, provider.id, provider.profileId])
+
   const allMessages = useMemo(
     () =>
       queries
@@ -67,12 +73,18 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, provider, custom
 
     setIsSending(true)
     try {
-      await queriesAPI.createQuery({
-        serviceId: provider.id,
-        providerId: provider.profileId,
-        customerId,
-        message: message.trim(),
-      })
+      const existingQuery = queries.find((query) => query.status !== "closed")
+
+      if (existingQuery) {
+        await queriesAPI.replyToCustomerQuery(existingQuery._id, message.trim())
+      } else {
+        await queriesAPI.createQuery({
+          serviceId: provider.id,
+          providerId: provider.profileId,
+          customerId,
+          message: message.trim(),
+        })
+      }
       setMessage("")
       await loadQueries()
     } catch (error: any) {

@@ -5,6 +5,7 @@ import {
   getProviderQueries,
   getCustomerQueries,
   replyToQuery,
+  replyToCustomerQuery,
 } from "../CONTROLLERS/queries.controller.js";
 
 const router = Router();
@@ -14,5 +15,6 @@ router.route("/").post(createQuery);
 router.route("/provider").get(getProviderQueries);
 router.route("/customer").get(getCustomerQueries);
 router.route("/:queryId/reply").post(replyToQuery);
+router.route("/:queryId/customer-reply").post(replyToCustomerQuery);
 
 export default router;
