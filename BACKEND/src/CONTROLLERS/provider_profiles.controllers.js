@@ -1,4 +1,4 @@
-import {ProviderProfile} from "../MODELS/provider_profiles.models.js";
+import { ProviderProfile } from "../MODELS/provider_profiles.models.js";
 import { User } from "../MODELS/users.models.js";
 import Booking from "../MODELS/booking.models.js";
 import Service from "../MODELS/services.models.js";
@@ -67,7 +67,6 @@ const updateProviderProfile = asyncHandler(async (req, res) => {
     );
 });
 
-
 const deleteProviderProfile = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
@@ -99,7 +98,9 @@ const getProviderDashboard = asyncHandler(async (req, res) => {
   }
 
   const [services, bookings, reviews] = await Promise.all([
-    Service.find({ providerId: profile._id, isActive: true }).sort({ createdAt: -1 }),
+    Service.find({ providerId: profile._id, isActive: true }).sort({
+      createdAt: -1,
+    }),
     Booking.find({ providerProfileId: profile._id })
       .populate("customerProfileId", "fullName")
       .populate("serviceId", "title pricing")
@@ -107,12 +108,18 @@ const getProviderDashboard = asyncHandler(async (req, res) => {
     Review.find({ providerProfileId: profile._id }),
   ]);
 
-  const completedBookings = bookings.filter((booking) => booking.status === "completed");
-  const pendingBookings = bookings.filter((booking) => booking.status === "pending");
+  const completedBookings = bookings.filter(
+    (booking) => booking.status === "completed"
+  );
+  const pendingBookings = bookings.filter(
+    (booking) => booking.status === "pending"
+  );
   const activeBookings = bookings.filter((booking) =>
     ["confirmed", "in-progress"].includes(booking.status)
   );
-  const respondedBookings = bookings.filter((booking) => booking.status !== "pending");
+  const respondedBookings = bookings.filter(
+    (booking) => booking.status !== "pending"
+  );
 
   const totalRevenue = completedBookings.reduce(
     (sum, booking) => sum + (booking.priceSnapshot?.totalAmount || 0),
@@ -122,10 +129,18 @@ const getProviderDashboard = asyncHandler(async (req, res) => {
   const serviceReviews = reviews.length;
   const averageRating =
     serviceReviews > 0
-      ? Number((reviews.reduce((sum, review) => sum + review.rating, 0) / serviceReviews).toFixed(1))
+      ? Number(
+          (
+            reviews.reduce((sum, review) => sum + review.rating, 0) /
+            serviceReviews
+          ).toFixed(1)
+        )
       : Number((profile.ratingSummary?.avg || 0).toFixed(1));
 
-  const profileViews = services.reduce((sum, service) => sum + (service.reviews || 0), 0);
+  const profileViews = services.reduce(
+    (sum, service) => sum + (service.reviews || 0),
+    0
+  );
 
   const now = new Date();
   const currentMonth = now.getMonth();
@@ -134,7 +149,9 @@ const getProviderDashboard = asyncHandler(async (req, res) => {
 
   const currentMonthBookings = bookings.filter((booking) => {
     const date = new Date(booking.createdAt);
-    return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+    return (
+      date.getMonth() === currentMonth && date.getFullYear() === currentYear
+    );
   });
 
   const previousMonthBookings = bookings.filter((booking) => {
@@ -147,37 +164,63 @@ const getProviderDashboard = asyncHandler(async (req, res) => {
 
   const currentRevenue = currentMonthBookings
     .filter((booking) => booking.status === "completed")
-    .reduce((sum, booking) => sum + (booking.priceSnapshot?.totalAmount || 0), 0);
+    .reduce(
+      (sum, booking) => sum + (booking.priceSnapshot?.totalAmount || 0),
+      0
+    );
   const previousRevenue = previousMonthBookings
     .filter((booking) => booking.status === "completed")
-    .reduce((sum, booking) => sum + (booking.priceSnapshot?.totalAmount || 0), 0);
+    .reduce(
+      (sum, booking) => sum + (booking.priceSnapshot?.totalAmount || 0),
+      0
+    );
 
   const revenueGrowth =
     previousRevenue > 0
-      ? Number((((currentRevenue - previousRevenue) / previousRevenue) * 100).toFixed(1))
+      ? Number(
+          (
+            ((currentRevenue - previousRevenue) / previousRevenue) *
+            100
+          ).toFixed(1)
+        )
       : currentRevenue > 0
-      ? 100
-      : 0;
+        ? 100
+        : 0;
 
   const servicesGrowth =
-    previousMonthBookings.filter((booking) => booking.status === "completed").length > 0
+    previousMonthBookings.filter((booking) => booking.status === "completed")
+      .length > 0
       ? Number(
-          ((
-            (currentMonthBookings.filter((booking) => booking.status === "completed").length -
-              previousMonthBookings.filter((booking) => booking.status === "completed").length) /
-            previousMonthBookings.filter((booking) => booking.status === "completed").length
-          ) * 100).toFixed(1)
+          (
+            ((currentMonthBookings.filter(
+              (booking) => booking.status === "completed"
+            ).length -
+              previousMonthBookings.filter(
+                (booking) => booking.status === "completed"
+              ).length) /
+              previousMonthBookings.filter(
+                (booking) => booking.status === "completed"
+              ).length) *
+            100
+          ).toFixed(1)
         )
-      : currentMonthBookings.filter((booking) => booking.status === "completed").length > 0
-      ? 100
-      : 0;
+      : currentMonthBookings.filter((booking) => booking.status === "completed")
+            .length > 0
+        ? 100
+        : 0;
 
   const viewsGrowth =
     previousMonthBookings.length > 0
-      ? Number((((currentMonthBookings.length - previousMonthBookings.length) / previousMonthBookings.length) * 100).toFixed(1))
+      ? Number(
+          (
+            ((currentMonthBookings.length - previousMonthBookings.length) /
+              previousMonthBookings.length) *
+            100
+          ).toFixed(1)
+        )
       : currentMonthBookings.length > 0
-      ? 100
-      : 0;
+        ? 100
+        : 0;
 
   const stats = {
     totalRevenue,
@@ -189,8 +232,12 @@ const getProviderDashboard = asyncHandler(async (req, res) => {
     activeBookings: activeBookings.length,
     pendingBookings: pendingBookings.length,
     rating: averageRating,
-    responseRate: bookings.length ? Math.round((respondedBookings.length / bookings.length) * 100) : 0,
-    completionRate: bookings.length ? Math.round((completedBookings.length / bookings.length) * 100) : 0,
+    responseRate: bookings.length
+      ? Math.round((respondedBookings.length / bookings.length) * 100)
+      : 0,
+    completionRate: bookings.length
+      ? Math.round((completedBookings.length / bookings.length) * 100)
+      : 0,
   };
 
   const revenueData = Array.from({ length: 6 }).map((_, index) => {
@@ -209,13 +256,20 @@ const getProviderDashboard = asyncHandler(async (req, res) => {
       month: monthLabel,
       revenue: monthBookings
         .filter((booking) => booking.status === "completed")
-        .reduce((sum, booking) => sum + (booking.priceSnapshot?.totalAmount || 0), 0),
+        .reduce(
+          (sum, booking) => sum + (booking.priceSnapshot?.totalAmount || 0),
+          0
+        ),
       bookings: monthBookings.length,
     };
   });
 
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const activityData = weekDays.map((day) => ({ day, queries: 0, bookings: 0 }));
+  const activityData = weekDays.map((day) => ({
+    day,
+    queries: 0,
+    bookings: 0,
+  }));
 
   bookings.forEach((booking) => {
     const bookingDate = new Date(booking.createdAt);
@@ -262,35 +316,44 @@ const getProviderDashboard = asyncHandler(async (req, res) => {
   });
 
   const priceComparison = await Promise.all(
-    Array.from(new Set(services.map((service) => service.categoryName))).map(async (categoryName) => {
-      const marketServices = await Service.find({ categoryName, isActive: true });
-      if (!marketServices.length) return null;
+    Array.from(new Set(services.map((service) => service.categoryName))).map(
+      async (categoryName) => {
+        const marketServices = await Service.find({
+          categoryName,
+          isActive: true,
+        });
+        if (!marketServices.length) return null;
 
-      const marketPrices = marketServices.map((service) => service.pricing);
-      const yourServices = services.filter((service) => service.categoryName === categoryName);
-      const yourAvgPrice = Math.round(
-        yourServices.reduce((sum, service) => sum + service.pricing, 0) / yourServices.length
-      );
-      const avgMarketPrice = Math.round(
-        marketPrices.reduce((sum, price) => sum + price, 0) / marketPrices.length
-      );
+        const marketPrices = marketServices.map((service) => service.pricing);
+        const yourServices = services.filter(
+          (service) => service.categoryName === categoryName
+        );
+        const yourAvgPrice = Math.round(
+          yourServices.reduce((sum, service) => sum + service.pricing, 0) /
+            yourServices.length
+        );
+        const avgMarketPrice = Math.round(
+          marketPrices.reduce((sum, price) => sum + price, 0) /
+            marketPrices.length
+        );
 
-      let marketPosition = "Competitive";
-      if (yourAvgPrice < avgMarketPrice * 0.9) {
-        marketPosition = "Budget";
-      } else if (yourAvgPrice > avgMarketPrice * 1.1) {
-        marketPosition = "Premium";
+        let marketPosition = "Competitive";
+        if (yourAvgPrice < avgMarketPrice * 0.9) {
+          marketPosition = "Budget";
+        } else if (yourAvgPrice > avgMarketPrice * 1.1) {
+          marketPosition = "Premium";
+        }
+
+        return {
+          category: categoryName,
+          yourPrice: `${profile.pricing?.currency || "₹"}${yourAvgPrice}`,
+          avgMarketPrice: `${profile.pricing?.currency || "₹"}${avgMarketPrice}`,
+          lowestPrice: `${profile.pricing?.currency || "₹"}${Math.min(...marketPrices)}`,
+          highestPrice: `${profile.pricing?.currency || "₹"}${Math.max(...marketPrices)}`,
+          marketPosition,
+        };
       }
-
-      return {
-        category: categoryName,
-        yourPrice: `${profile.pricing?.currency || "₹"}${yourAvgPrice}`,
-        avgMarketPrice: `${profile.pricing?.currency || "₹"}${avgMarketPrice}`,
-        lowestPrice: `${profile.pricing?.currency || "₹"}${Math.min(...marketPrices)}`,
-        highestPrice: `${profile.pricing?.currency || "₹"}${Math.max(...marketPrices)}`,
-        marketPosition,
-      };
-    })
+    )
   );
 
   const responseData = {
@@ -301,6 +364,7 @@ const getProviderDashboard = asyncHandler(async (req, res) => {
       verified: profile.verified,
       category: services[0]?.categoryName || "",
       userName: profile.userId?.fullName,
+      currency: profile.pricing?.currency || "₹",
     },
     stats,
     revenueData,
@@ -311,7 +375,18 @@ const getProviderDashboard = asyncHandler(async (req, res) => {
 
   return res
     .status(StatusCodes.OK)
-    .json(new ApiResponse(StatusCodes.OK, responseData, "Dashboard retrieved successfully"));
+    .json(
+      new ApiResponse(
+        StatusCodes.OK,
+        responseData,
+        "Dashboard retrieved successfully"
+      )
+    );
 });
 
-export { getProviderProfile, updateProviderProfile, deleteProviderProfile, getProviderDashboard };
+export {
+  getProviderProfile,
+  updateProviderProfile,
+  deleteProviderProfile,
+  getProviderDashboard,
+};

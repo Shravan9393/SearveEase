@@ -8,6 +8,7 @@ export interface ProviderDashboardData {
     verified: boolean;
     category: string;
     userName: string;
+    currency: string;
   };
   stats: {
     totalRevenue: number;
