@@ -25,6 +25,7 @@ import { Label } from "./ui/label"
 import { Slider } from "./ui/slider"
 import { ImageWithFallback } from "./figma/ImageWithFallback"
 import { ChatModal, ServiceProvider } from "./ChatModal"
+import { ServiceDetailsModal } from "./ServiceDetailsModal"
 import { CartItem } from "../App"
 import { servicesAPI, categoriesAPI, Service as BackendService } from "../services"
 import { useAuth } from "../context/AuthContext"
@@ -75,6 +76,8 @@ const ServicesPage: React.FC<ServicesPageProps> = ({
   const [sortBy, setSortBy] = useState("relevance")
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [isChatOpen, setIsChatOpen] = useState(false)
+  const [isServiceDetailsOpen, setIsServiceDetailsOpen] = useState(false)
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null)
   const [selectedProvider, setSelectedProvider] = useState<ServiceProvider | null>(null)
   const [showFilters, setShowFilters] = useState(true)
   const [showCart, setShowCart] = useState(true)
@@ -214,6 +217,11 @@ const ServicesPage: React.FC<ServicesPageProps> = ({
     }
     setSelectedProvider(provider)
     setIsChatOpen(true)
+  }
+
+  const openServiceDetails = (serviceId: string) => {
+    setSelectedServiceId(serviceId)
+    setIsServiceDetailsOpen(true)
   }
 
   const getTotalAmount = () => {
@@ -374,7 +382,11 @@ const ServicesPage: React.FC<ServicesPageProps> = ({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05, duration: 0.6 }}
               >
-                <GlassCard interactive className="group overflow-hidden h-full">
+                <GlassCard
+                  interactive
+                  className="group overflow-hidden h-full cursor-pointer"
+                  onClick={() => openServiceDetails(service.id)}
+                >
                   <div className="relative">
                     <ImageWithFallback
                       src={service.image}
@@ -441,7 +453,10 @@ const ServicesPage: React.FC<ServicesPageProps> = ({
 
                     <div className="flex space-x-2">
                       <Button
-                        onClick={() => addToCart(service)}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          addToCart(service)
+                        }}
                         disabled={service.availability === 'unavailable'}
                         className="flex-1 bg-gradient-to-r from-primary to-sage-700 hover:from-sage-700 hover:to-primary text-xs py-2 h-8"
                       >
@@ -449,7 +464,10 @@ const ServicesPage: React.FC<ServicesPageProps> = ({
                         Add to Cart
                       </Button>
                       <Button
-                        onClick={() => openChat(service)}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          openChat(service)
+                        }}
                         variant="outline"
                         className="h-8 px-3 glass"
                       >
@@ -596,6 +614,15 @@ const ServicesPage: React.FC<ServicesPageProps> = ({
           customerId={isAuthenticated && user?.role === "customer" ? user._id : undefined}
         />
       )}
+
+      <ServiceDetailsModal
+        isOpen={isServiceDetailsOpen}
+        onClose={() => {
+          setIsServiceDetailsOpen(false)
+          setSelectedServiceId(null)
+        }}
+        serviceId={selectedServiceId}
+      />
     </div>
   )
 }
