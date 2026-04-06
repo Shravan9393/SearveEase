@@ -16,3 +16,8 @@ export type { ProviderDashboardData } from './provider';
 
 export { notificationsAPI } from './notifications';
 export type { AppNotification, NotificationMetadata } from './notifications';
+export { queriesAPI } from './queries';
+export type { ServiceQuery, QueryMessage } from './queries';
+
+export { reviewsAPI } from './reviews';
+export type { Review } from './reviews';

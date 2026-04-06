@@ -27,6 +27,7 @@ import { ImageWithFallback } from "./figma/ImageWithFallback"
 import { ChatModal, ServiceProvider } from "./ChatModal"
 import { CartItem } from "../App"
 import { servicesAPI, categoriesAPI, Service as BackendService } from "../services"
+import { useAuth } from "../context/AuthContext"
 
 const getProviderProfileId = (provider: BackendService["providerId"]) =>
   typeof provider === "string" ? provider : provider?._id || ""
@@ -80,6 +81,7 @@ const ServicesPage: React.FC<ServicesPageProps> = ({
   const [services, setServices] = useState<Service[]>([])
   const [categories, setCategories] = useState<string[]>(["All Services"])
   const [isLoading, setIsLoading] = useState(true)
+  const { user, isAuthenticated } = useAuth()
 
 
   const sortOptions = [
@@ -122,8 +124,6 @@ const ServicesPage: React.FC<ServicesPageProps> = ({
           id: service._id,
 
           providerProfileId: getProviderProfileId(service.providerId),
-
-          providerProfileId: service.providerId,
 
           name: service.title,
           provider: service.providerName,
@@ -202,6 +202,7 @@ const ServicesPage: React.FC<ServicesPageProps> = ({
   const openChat = (service: Service) => {
     const provider: ServiceProvider = {
       id: service.id,
+      profileId: service.providerProfileId,
       name: service.provider,
       image: service.image,
       rating: service.rating,
@@ -592,15 +593,7 @@ const ServicesPage: React.FC<ServicesPageProps> = ({
             setSelectedProvider(null)
           }}
           provider={selectedProvider}
-          onBookService={(providerId, price) => {
-            // Find the service and add to cart
-            const service = services.find(s => s.id === providerId)
-            if (service) {
-              addToCart(service)
-            }
-            setIsChatOpen(false)
-            setSelectedProvider(null)
-          }}
+          customerId={isAuthenticated && user?.role === "customer" ? user._id : undefined}
         />
       )}
     </div>

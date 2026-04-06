@@ -7,6 +7,9 @@ import { Badge } from "../ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs"
 import { bookingsAPI, Booking } from "../../services/bookings"
+import { reviewsAPI } from "../../services/reviews"
+import { Input } from "../ui/input"
+import { Textarea } from "../ui/textarea"
 
 interface ProfilePageProps {
   user: any
@@ -18,6 +21,8 @@ interface ProfilePageProps {
 const ProfilePage: React.FC<ProfilePageProps> = ({ user, onLogout, isAuthenticated, onAuthClick }) => {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [isLoadingBookings, setIsLoadingBookings] = useState(false)
+  const [reviewDrafts, setReviewDrafts] = useState<Record<string, { rating: string; comment: string }>>({})
+  const [submittedReviewBookingIds, setSubmittedReviewBookingIds] = useState<string[]>([])
 
   useEffect(() => {
     const loadBookings = async () => {
@@ -41,6 +46,30 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onLogout, isAuthenticat
     () => bookings.filter((booking) => booking.status === "completed").length,
     [bookings]
   )
+
+
+  const submitReview = async (bookingId: string) => {
+    const draft = reviewDrafts[bookingId]
+    const rating = Number(draft?.rating || 0)
+
+    if (!rating || rating < 1 || rating > 5) {
+      alert("Please provide a rating between 1 and 5")
+      return
+    }
+
+    try {
+      await reviewsAPI.createReview({
+        bookingId,
+        rating,
+        comment: draft?.comment || "",
+      })
+      setSubmittedReviewBookingIds((prev) => [...prev, bookingId])
+      alert("Review submitted successfully")
+    } catch (error: any) {
+      console.error("Failed to submit review", error)
+      alert(error?.response?.data?.message || "Failed to submit review")
+    }
+  }
 
   const getStatusIcon = (status: Booking["status"]) => {
     if (status === "completed") return <CheckCircle size={14} className="text-green-500" />
@@ -118,15 +147,37 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onLogout, isAuthenticat
             {!isLoadingBookings && bookings.length === 0 && <p className="text-muted-foreground">No bookings yet.</p>}
             {bookings.map((booking) => (
               <Card key={booking._id} className="glass rounded-2xl">
-                <CardContent className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                  <div>
-                    <p className="font-medium">{(booking as any).serviceId?.title || "Service"}</p>
-                    <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1"><Calendar size={12} /> {new Date(booking.scheduled.date).toLocaleDateString()} • {booking.scheduled.time}</p>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div>
+                      <p className="font-medium">{(booking as any).serviceId?.title || "Service"}</p>
+                      <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1"><Calendar size={12} /> {new Date(booking.scheduled.date).toLocaleDateString()} • {booking.scheduled.time}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="capitalize flex items-center gap-1">{getStatusIcon(booking.status)} {booking.status}</Badge>
+                      <p className="font-semibold">₹{booking.priceSnapshot.totalAmount}</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="capitalize flex items-center gap-1">{getStatusIcon(booking.status)} {booking.status}</Badge>
-                    <p className="font-semibold">₹{booking.priceSnapshot.totalAmount}</p>
-                  </div>
+
+                  {user.role === "customer" && booking.status === "completed" && !submittedReviewBookingIds.includes(booking._id) && (
+                    <div className="border border-primary/20 rounded-xl p-3 bg-muted/10 space-y-2">
+                      <p className="text-sm font-medium">Leave a review</p>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={5}
+                        placeholder="Rating (1-5)"
+                        value={reviewDrafts[booking._id]?.rating || ""}
+                        onChange={(e) => setReviewDrafts((prev) => ({ ...prev, [booking._id]: { rating: e.target.value, comment: prev[booking._id]?.comment || "" } }))}
+                      />
+                      <Textarea
+                        placeholder="Write your feedback"
+                        value={reviewDrafts[booking._id]?.comment || ""}
+                        onChange={(e) => setReviewDrafts((prev) => ({ ...prev, [booking._id]: { rating: prev[booking._id]?.rating || "", comment: e.target.value } }))}
+                      />
+                      <Button size="sm" onClick={() => submitReview(booking._id)}>Submit Review</Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
